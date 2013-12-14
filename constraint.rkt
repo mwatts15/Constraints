@@ -21,17 +21,24 @@
     ;        otherwise false
     (define (resolve)
       (error "abstract"))
+
     (define (reevaluate)
+      (display `(..... forgetting on))
       (for ([(_ c) connectors])
         (send c forgetValue! this))
       (send this resolve))
+
     (define (disconnect port)
       (hash-set! connectors port 'unset))
-    (define (connect port connector)
+
+    (define (attach port connector)
       (hash-set! connectors port connector))
+
     (define (getPort port-name)
       (hash-ref connectors port-name))
-    (public getPort resolve reevaluate disconnect connect)
+    (public getPort 
+            resolve reevaluate 
+            disconnect attach)
     ; for writeable<%>
     (public custom-write custom-display)))
 
@@ -145,11 +152,11 @@
     (super-new)
     (define v 'unset)
     (define informant false)
-    (define constraints '())
+    (field [constraints '()])
     (define (hasValue?)
       (if informant true false))
     (define (set newval setter)
-      ;(printf "setting connector<<~a>> to ~a~n" constraints newval)
+      ;(printf "~a setting ~a to ~a~n" setter this newval)
       (cond [(not (send this hasValue?))
              (set! v newval)
              (set! informant setter)
@@ -166,105 +173,58 @@
             [else (set newval setter)]))
 
     (define (forget retractor)
-      (if (eq? retractor informant)
-        
-        (begin ;(printf "setting connector<<~a>> to forget~n" constraints)
-               (set! informant false)
-               (for ([x constraints]
-                     #:unless retractor)
-                 (send x reevaluate)))
-        false))
+      (and (eq? retractor informant)
+           (set! informant false)
+           (for ([x constraints]
+                 #:unless (eq? x retractor))
+             (send x reevaluate))))
 
     (define (getValue)
       v)
 
     (define (connect new-constraint)
-      (if (not (memq new-constraint constraints))
-        (set! constraints 
-          (cons new-constraint constraints))
-        false)
-      (if (send this hasValue?)
-        (send new-constraint resolve)
-        false))
+      ;(display `(connecting ,new-constraint to ,this)) (newline)
+      (and (not (memq new-constraint constraints))
+           ;(display 'here) (newline)
+           (set! constraints (cons new-constraint constraints))))
+           ;(display constraints) (newline)))
+
+    (define (getConstraints)
+      constraints)
 
     (public
       (forget forgetValue!)
       (set setValue!)
       requestSetValue!
+      getConstraints
       hasValue?
       connect
       getValue)))
 
-; holds a value and matches the value of its sole connector.
-; change the value though the methods setValue! and forgetValue!
-(define Variable
-  (class Constraint
-    (super-new (ports '(out)))
-    (inherit getPort)
-
-    (init-field [name (gensym)])
-    (define v 'unset)
-
-    (define (set newval)
-      (if (eq? newval 'unset)
-        (send this forgetValue!)
-        (begin (set! v newval)
-               (send (getPort 'out) setValue! v this)))
-      (printf "~a = ~a~n" name v))
-
-    (define (forget)
-      (set! v 'unset)
-      (send (getPort 'out) forgetValue! this)
-      (printf "~a = ~a~n" name v))
-
-    (define (getValue)
-      (set! v (send (getPort 'out) getValue))
-      v)
-
-    (define/override (resolve)
-      (let* ([p (getPort 'out)]
-             [pval (send p getValue)])
-        (and (send p hasValue?)
-          (set! v pval)))
-      (printf "~a = ~a~n" name v))
-
-    (public
-      (forget forgetValue!)
-      (set setValue!)
-      getValue)))
 ; holds a constant and matches the value of its sole connector.
 ; change the value though the methods setValue! and forgetValue!
 (define Constant
   (class Constraint
     (super-new (ports '(out)))
     (inherit getPort)
-
-    (define v 'unset)
+    (init [value 'unset])
+    (define v value)
 
     (define (set newval)
-      ;(printf "setting ~a to ~a ~n" this newval)
-      (if (eq? newval 'unset)
-        (send this forgetValue!)
-        (begin (set! v newval)
-               (send (getPort 'out) setValue! v this))))
-
-    (define (forget)
-      (set! v 'unset)
-      (send (getPort 'out) forgetValue! this))
+      (send (getPort 'out) forgetValue! this)
+      (and (not (eq? newval 'unset))
+           (begin (set! v newval)
+                  (send (getPort 'out) setValue! v this))))
 
     (define (getValue)
-      (set! v (send (getPort 'out) getValue))
       v)
 
     (define/override (resolve)
-      (let* ([p (getPort 'out)]
-             [pval (send p getValue)])
-        (if (and (send p hasValue?) (unset? v))
-          (set! v pval)
-          (send p setValue! v))))
+      (let* ([p (getPort 'out)])
+        (and (not (unset? v))
+             (send p setValue! v))))
 
     (public
-      (forget forgetValue!)
       (set setValue!)
       getValue)))
 
@@ -272,7 +232,7 @@
     (send connector
           connect constraint)
     (send constraint
-          connect p connector))
+          attach p connector))
 
 (define (connectConstraints c1 port1 c2 port2)
   (define the-connector
@@ -286,8 +246,8 @@
   (if (not (eq? the-connector 'bad-connect))
     (begin (send the-connector connect c1)
            (send the-connector connect c2)
-           (send c1 connect port1 the-connector)
-           (send c2 connect port2 the-connector))
+           (send c1 attach port1 the-connector)
+           (send c2 attach port2 the-connector))
     #f))
 
 (define (disconnectConstraint c port)

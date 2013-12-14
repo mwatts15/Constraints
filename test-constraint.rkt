@@ -102,12 +102,30 @@
 (define TestConstraint
   (class object%
     (super-new)
-    (init value connector)
+    (init connector)
+    (init [value 'unset])
     (field [v value] [c connector])
     (send c connect this)
     (define/public (resolve)
       (let* ([pval (send c getValue)])
         (send c setValue! v this)))))
+
+(define TestConstraint_resolved
+  (class object%
+    (super-new)
+    (init connector)
+    (field [v false] [c connector])
+    (send c connect this)
+    (define/public (isResolved?)
+      v)
+    (define/public (resolve)
+      (set! v true))))
+
+(define TestConstraintInherited
+  (class Constraint
+    (super-new)
+    (define/override (resolve)
+      #t)))
 
 (define TestConnector-1
   (class object%
@@ -130,9 +148,36 @@
       (send c resolve))
     (public go connect hasValue? setValue! getValue)))
 
+(define TestConnector-2
+  (class object%
+    (super-new)
+    (field [v #f] [c false])
+    (define (setValue! . _)
+      (set! v #t))
+    (define (forgetValue! . _)
+      (set! v #f))
+    (define (hasValue?)
+      v)
+    (define (connect con)
+      (set! c con))
+    (define (go)
+      (send c reevaluate))
+    (public go connect hasValue? forgetValue! setValue!)))
+
 (define tests
   (list
     (test-suite "Constraint"
+      (test-case "forgets propagates"
+                 (let ([c1 (new TestConnector-2)]
+                       [c2 (new TestConnector-2)]
+                       [cc (new TestConstraintInherited)])
+                   (send c1 setValue!)
+                   (send c2 setValue!)
+                   (connect c1 cc 'aPort)
+                   (connect c2 cc 'anotherPort)
+                   (send c1 go)
+                   (check-false (send c1 hasValue?))
+                   (check-false (send c2 hasValue?))))
       (resolveNot)
       (resolveOr)
       (resolveAnd))
@@ -160,6 +205,16 @@
                    (connect result vb 'result)
                    (check-exn exn:contradiction? (thunk (send tc go))))))
     (test-suite "Connector"
+      (test-case "multiple constraints on one connector"
+                 (let* ([c (new Connector)]
+                        [tc1 (new TestConstraint_resolved [connector c])]
+                        [tc2 (new TestConstraint_resolved [connector c])]
+                        [tc3 (new TestConstraint_resolved [connector c])])
+                   (for ([x (list tc1 tc2 tc3)])
+                     (check-false (send x isResolved?)))
+                   (send c setValue! 5 'user)
+                   (for ([x (list tc1 tc2 tc3)])
+                     (check-true (send x isResolved?)))))
       (test-case "setValue! different values"
                  (let ([c (new Connector)])
                    (send c setValue! 2 'user)
