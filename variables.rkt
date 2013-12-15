@@ -25,6 +25,13 @@
            [y (new Variable)]
            [width (new Variable)]
            [height (new Variable)])
+    (define/public (setPos p)
+      (send x setValue! (car p))
+      (send y setValue! (cdr p)))
+    (define/public (setWidth w)
+      (send width setValue! w))
+    (define/public (setHeight h)
+      (send height setValue! h))
     (super-new)))
 
 (define SquareV

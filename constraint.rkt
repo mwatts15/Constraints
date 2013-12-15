@@ -134,6 +134,27 @@
               (send r setValue! false this))
             (send p setValue! (satisfier pval) this)))))))
 
+(define LeftOf
+  (class Constraint
+    (super-new (ports '(o1 o2 out)))
+    (inherit getPort)
+    (define/override (attach p c)
+      (and (or (eq? p 'o1) (eq? p 'o2))
+           (connect (get-field x c) this `(,p x))
+           (connect (get-field width c) this `(,p width)))
+      (super attach p c))
+
+    (define/override (resolve)
+        (let ([o1x (getPort '(o1 x))]
+              [o1w (getPort '(o1 width))]
+              [o2x (getPort '(o2 x))]
+              [r (getPort 'out)])
+          (and (and (send r hasValue?) (eq? true (send r getValue)))
+               (cond [(and (send o1x hasValue?) (send o1w hasValue?)) 
+                      (send o2x setValue! (+ (send o1x getValue) (send o1w getValue)) this)]
+                     [(and (send o2x hasValue?) (send o1w hasValue?))
+                      (send o1x setValue! (- (send o2x getValue) (send o1w getValue)) this)]))))))
+
 (PredicateConstraint ValBox 
                      (lambda (x) (is-a? x V:ValueBox)) 
                      (lambda (x) (new V:ValueBox [value x])))
