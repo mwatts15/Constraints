@@ -13,16 +13,46 @@
 (define Drawable
   (interface () draw))
 
+(define SquareRep
+  (class object%
+    (super-new)
+    (init-field connector)
+    (connect (get-field x connector) this)
+    (connect (get-field y connector) this)
+    (connect (get-field width connector) this)
+    (define (resolve)
+      (printf "~a (~a,~a) w=~a ~n"
+              (get-field name connector)
+              (send (get-field x connector) getValue)
+              (send (get-field y connector) getValue)
+              (send (get-field width connector) getValue)))
+
+    (define (reevaluate) (resolve))
+
+    (define (disconnect port)
+      (error "nope"))
+
+    (define (attach port c)
+      void)
+
+    (public resolve reevaluate 
+            disconnect attach)))
+
 (define Representation
   (class object%
     (super-new)
     ; bounds
     [init (x 0) (y 0) (w 1) (h 1)]
     (field [pos (new point% (x x) (y y))])
+    (define (resolve)
+      (let ([x (car new-pos)] [y (cdr new-pos)])
+        (set! pos (make-point x y))))
+    
     (define (set-pos new-pos)
       (let ([x (car new-pos)] [y (cdr new-pos)])
         (printf "setting pos (~a,~a)~n" x y)
         (set! pos (make-point x y))))
+
     (define bounds (new rect% (w w) (h h)))
     (define (draw dc)
       (error "abstract"))

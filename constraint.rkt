@@ -14,6 +14,7 @@
     (define (custom-write out)
       (display this% out)
       (write (dict-keys connectors) out))
+
     (define (custom-display out)
       (send this custom-write out))
     ; Try to resolve
@@ -23,7 +24,6 @@
       (error "abstract"))
 
     (define (reevaluate)
-      (display `(..... forgetting on))
       (for ([(_ c) connectors])
         (send c forgetValue! this))
       (send this resolve))
@@ -36,6 +36,7 @@
 
     (define (getPort port-name)
       (hash-ref connectors port-name))
+
     (public getPort 
             resolve reevaluate 
             disconnect attach)
@@ -162,6 +163,7 @@
              (set! informant setter)
              (for ([x constraints]
                    #:unless (eq? x setter))
+                  ;(display `(resolve ,x))
                (send x resolve))]
             [((compose not eq?) v newval)
              (raise (exn:contradiction newval v))]))
@@ -228,7 +230,7 @@
       (set setValue!)
       getValue)))
 
-(define (connect connector constraint p)
+(define (connect connector constraint [p null])
     (send connector
           connect constraint)
     (send constraint

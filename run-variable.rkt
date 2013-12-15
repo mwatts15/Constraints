@@ -1,6 +1,5 @@
 #lang racket
 
-(require prelude)
 (require "constraint.rkt")
 (require "variables.rkt")
 
@@ -29,36 +28,59 @@
       (super attach p c))
 
     (define/override (resolve)
-      (display 'resolving)(newline)
         (let ([o1x (getPort '(o1 x))]
               [o1w (getPort '(o1 width))]
               [o2x (getPort '(o2 x))]
               [r (getPort 'out)])
-          (display (send r hasValue?)) (newline)
           (and (and (send r hasValue?) (eq? true (send r getValue)))
                (cond [(and (send o1x hasValue?) (send o1w hasValue?)) 
-                      (display 'here) (newline)
                       (send o2x setValue! (+ (send o1x getValue) (send o1w getValue)) this)]
                      [(and (send o2x hasValue?) (send o1w hasValue?))
-                      (display 'there) (newline)
                       (send o1x setValue! (- (send o2x getValue) (send o1w getValue)) this)]))))))
 
-(let ([o1 (new SquareV)]
-      [o2 (new SquareV)]
-      [t (new Variable)]
-      [l (new LeftOf)])
+; We have observers that get notified when a variable changes.
+; These are similar to the probes in the SICP formulation.
+; However, our observers can be associated with more than one
+; variable. The associations are set up by an intermediary that
+; performs the connections to the variables. In this case, the
+; probe itself sets up the connections to the other things.
+; Although observers have an interface that matches constraints
+; they are not constraints.
+(define SquareRep
+  (class object%
+    (super-new)
+    (init-field connector)
+    (connect (get-field x connector) this)
+    (connect (get-field y connector) this)
+    (connect (get-field width connector) this)
+    (define (resolve)
+      (printf "~a (~a,~a) w=~a ~n"
+              (get-field name connector)
+              (send (get-field x connector) getValue)
+              (send (get-field y connector) getValue)
+              (send (get-field width connector) getValue)))
+
+    (define (reevaluate) (resolve))
+
+    (define (disconnect port)
+      (error "nope"))
+
+    (define (attach port c)
+      void)
+
+    (public resolve reevaluate 
+            disconnect attach)))
+
+(let* ([o1 (new SquareV)]
+       [o2 (new SquareV)]
+       [t (new Variable)]
+       [l (new LeftOf)]
+       [sr1 (make-object SquareRep o1)]
+       [sr2 (make-object SquareRep o2)])
   (connect o1 l 'o1) 
   (connect o2 l 'o2) 
   (connect t l 'out)
   (send (get-field width o1) setValue! 12)
   (send (get-field x o1) setValue! 12)
   (send t setValue! #t)
-  (send (get-field width o1) setValue! 17)
-  (printf "o1 (~a,~a) w=~a ~n"
-          (send (get-field x o1) getValue)
-          (send (get-field y o1) getValue)
-          (send (get-field width o1) getValue))
-  (printf "o2 (~a,~a) w=~a ~n"
-          (send (get-field x o2) getValue)
-          (send (get-field y o2) getValue)
-          (send (get-field width o2) getValue)))
+  (send (get-field width o1) setValue! 17))

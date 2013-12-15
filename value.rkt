@@ -1,6 +1,5 @@
 #lang racket
 
-(require prelude)
 (provide (all-defined-out))
 
 (define Box

@@ -9,7 +9,7 @@
     (init-field [name (gensym)])
 
     (define (set newval [setter this])
-      (display `(setting ,this with ,newval from ,setter))(newline)
+      ;(display `(setting ,this with ,newval from ,setter))(newline)
       (and (eq? setter this)
            (send this forgetValue! this))
       (super set newval setter))
