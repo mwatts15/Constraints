@@ -5,19 +5,21 @@
 (define Variable
   (class Connector
     (super-new)
-
-    (init-field [name (gensym)])
+    (init [name (gensym)])
+    (define _name name)
 
     (define (set newval [setter this])
       ;(display `(setting ,this with ,newval from ,setter))(newline)
-      (and (eq? setter this)
-           (send this forgetValue! this))
+      (and (send this informant? setter)
+           (send this forgetValue! setter))
       (super set newval setter))
 
+    (define (getName)
+      _name)
     (define (getMembers)
       (field-names this))
     (override (set setValue!))
-    (public getMembers)))
+    (public getMembers getName)))
 
 (define ObjectV
   (class Variable
@@ -26,8 +28,8 @@
            [width (new Variable)]
            [height (new Variable)])
     (define/public (setPos p)
-      (send x setValue! (car p))
-      (send y setValue! (cdr p)))
+      (send x setValue! (send p get-x))
+      (send y setValue! (send p get-y)))
     (define/public (setWidth w)
       (send width setValue! w))
     (define/public (setHeight h)

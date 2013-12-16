@@ -55,7 +55,7 @@
     (connect (get-field width connector) this)
     (define (resolve)
       (printf "~a (~a,~a) w=~a ~n"
-              (get-field name connector)
+              (send connector getName)
               (send (get-field x connector) getValue)
               (send (get-field y connector) getValue)
               (send (get-field width connector) getValue)))

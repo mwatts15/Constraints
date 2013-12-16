@@ -24,35 +24,34 @@
 (define SquareRep
   (class object%
     (super-new)
-    (field [dc null])
-    (init-field connector)
+
+    (init drawingContext)
+    (init connector)
+
     (define _x (get-field x connector))
     (define _y (get-field y connector))
     (define _width (get-field width connector))
-
     (define _currPos (make-point 0 0))
-    (define (setPos)
+    (define _currWidth 20)
+    (define _name (send connector getName)) 
+    (define _dc drawingContext)
+
+    (define (setPos p)
+      (send _x setValue! (send p get-x) this)
+      (send _y setValue! (send p get-y) this))
+
+    (define (setWidth w)
+      (send _width setValue! w this))
+
+    (define (resolve)
       (and (send _x hasValue?)
            (send _currPos set-x (send _x getValue)))
       (and (send _y hasValue?)
-           (send _currPos set-y (send _y getValue))))
-
-    (define _currWidth 20)
-    (define (setWidth)
+           (send _currPos set-y (send _y getValue)))
       (and (send _width hasValue?)
-           (set! _currWidth (send _width getValue))))
-
-    (connect _x this)
-    (connect _y this)
-    (connect _width this)
-    (setPos)
-    (setWidth)
-    (define (resolve)
-      (setPos)
-      (setWidth)
-      (printf "~a,~a~n" (send _currPos get-x)(send _currPos get-y))
-      (send dc set-brush blue-brush)
-      (send dc draw-rectangle (send _currPos get-x)
+           (set! _currWidth (send _width getValue)))
+      (send _dc set-brush blue-brush)
+      (send _dc draw-rectangle (send _currPos get-x)
             (send _currPos get-y) _currWidth _currWidth))
 
     (define (reevaluate) (resolve))
@@ -63,16 +62,27 @@
     (define (attach port c)
       void)
 
-    (public resolve reevaluate 
+    (define (inside? p)
+      (let ([px (send p get-x)]
+            [py (send p get-y)]
+            [x (send _currPos get-x)]
+            [y (send _currPos get-y)]
+            [w _currWidth])
+        (and (> px x) (> py y) (< px (+ x w)) (< py (+ y w)))))
+
+    (define (getName)
+      _name)
+
+    (connect _x this)
+    (connect _y this)
+    (connect _width this)
+
+    (public setPos setWidth resolve reevaluate 
+            inside? getName
             disconnect attach)))
 
 (define (make-point x y)
   (make-object point% x y))
-
-(define rect%
-  (class object%
-    (super-new)
-    [init-field w h]))
 
 ; vars have can contain many variables, each with a name
 ; a var is analogous to a rule in prolog and can contain
@@ -80,95 +90,100 @@
 ; box(b), valBox(b)
 ; hasColor(b,c) <- equals(c, b.c)
 ; 
-; we are endowing variables with additional functionality that allows
-; for them to aggregate other variables
-;
-; most of the things we do to a var are things we do to a variable
-; however, a var can also be drawn...
-;(define/override (draw dc)
-      ;(let ([x (send pos get-x)]
-            ;[y (send pos get-y)]
-            ;[w (get-field w the-rect)]
-            ;[h (get-field h the-rect)])
-        ;(printf "drawing at ~a ~a~n" x y)
-        ;(send dc set-brush blue-brush)
-        ;(send dc draw-rectangle x y w h)))
 
 ; a store for variables
 (define State
   (class object%
     (super-new)
-    (define vars (list))
-
-    (define (setSelected objectID)
-      (onSelectionChange))
-
-    (define (onSelectionChange)
-      (updateSelectedAttributes))
+    (define vars (make-hash))
 
     (define (newVar class) 
-      (let ([o (new class)])
-        (set! vars (cons o vars))
-        (setSelected 0)))
+      (if (subclass? class Variable)
+        (let ([o (new class)])
+          (hash-set! vars (send o getName) o)
+          (send o getName))
+        (error "cannot make a variable of non-variable type" class)))
 
-    (define (send-selected the-method . &args)
-      (apply dynamic-send (first vars) the-method &args))
+    (define (getVar name)
+      (hash-ref vars name))
 
     (public newVar 
-            (send-selected ->selected))))
+            getVar)))
 
 ; a store for drawable objects. resonds to draw and holds a canvas
-(define ObjectHolder
+(define Representation
   (class object% 
     (super-new)
-    (define objects '())
-    (define (drawObjects)
-      (for ([o objects])
-        (send o draw)))))
+    (define _selected 'unset)
+    (define _objects (make-hash))
+    (init drawingContext)
+    (init [selectionCallback void])
+    (define _dc drawingContext)
 
-(define state (new State))
 
-(define (add-square)
-  (send state newVar SquareV)
-  (send state ->selected 'getConstraints))
+    (define (setSelected objectID)
+      (set! _selected objectID)
+      (onSelectionChange))
 
-(define the-square-var
-  (new ObjectV))
+    (define (setSelectedByLocation location)
+      (let ([candidateSelections 
+              (filter
+                (lambda (o) 
+                  (send (dict-ref _objects o) inside? location))
+                (dict-keys _objects))])
+        (if (empty? candidateSelections)
+          #f
+          (setSelected (first candidateSelections)))))
 
-(define the-square-rep
-  (new SquareRep [connector the-square-var]))
+    (define (getSelected)
+      (hash-ref _objects _selected))
 
-(define the-square-var2
-  (new ObjectV))
+    (define onSelectionChange selectionCallback)
 
-(define the-square-rep2
-  (new SquareRep [connector the-square-var2]))
+    (define (sendSelected the-method . &args)
+      (apply dynamic-send (dict-ref _objects _selected) the-method &args))
 
-(define lo (new LeftOf))
-(define t (new Variable))
-(connect the-square-var lo 'o1)
-(connect the-square-var2 lo 'o2)
-(connect t lo 'out)
+    (define (newRepresentation repKind var)
+      (let ([name (send var getName)])
+        (dict-set! _objects name (new repKind [drawingContext _dc] [connector var]))
+        (setSelected name)
+        name))
+
+    (define (draw)
+      (send _dc clear)
+      (for ([o (in-dict-values _objects)])
+        (send o resolve)))
+    (public draw newRepresentation setSelectedByLocation setSelected getSelected sendSelected)))
+
+
 
 (define draw-canvas%
   (class canvas%
     (super-new )
+
     (define dc (send this get-dc))
-    (set-field! dc the-square-rep dc)
-    (set-field! dc the-square-rep2 dc)
+
+    (define state (new State))
+
+    (define rep (new Representation [drawingContext dc]))
+
+    (define/public (add-square)
+      (send rep newRepresentation SquareRep
+            (send state getVar (send state newVar SquareV)))
+      (redraw))
+
     (define/override (on-subwindow-event receiver event)
       (let-values ([(x y) (values (send event get-x) (send event get-y))])
-        (cond [(or (send event button-down?)
-                   (send event dragging?))
-               (send the-square-var setPos (cons x y))
+        (cond [(send event button-down?)
+               (send rep setSelectedByLocation (make-point x y))
+               (display `(selected is ,(send rep sendSelected 'getName)))(newline)
+               (redraw)]
+              [(send event dragging?)
+               (send rep sendSelected 'setPos (make-point x y))
                (redraw)])))
-    (define (draw-state)
-      (send dc clear)
-      (send the-square-rep reevaluate)
-      (send the-square-rep2 reevaluate))
 
     (define (redraw)
-        (draw-state))))
+      (send rep draw))))
 
 (define my-frame% 
   (class frame%
@@ -176,11 +191,11 @@
 
 (define w (new my-frame% [label "Silly window"]))
 
-(define selectedAttributesView
-  (new list-box% [label "Constraints"] [choices '("no constraints")] [parent w]))
+;(define selectedAttributesView
+  ;(new list-box% [label "Variables"] [choices '("no constraints")] [parent w]))
 
-(define (updateSelectedAttributes)
-  (send selectedAttributesView set (send state ->selected 'getMembers)))
+;(define (updateSelectedAttributes)
+  ;(send selectedAttributesView set (list "updated selected attributes")))
 
 (define the-canvas (new draw-canvas% [parent w]))
 
@@ -188,7 +203,7 @@
   (new button% 
        [label "Add square"]
        [callback (lambda (b e)
-                   (add-square))]
+                   (send the-canvas add-square))]
        [parent w]))
 
 (define add-color-button
@@ -199,8 +214,6 @@
        [parent w]))
 
 (send w show "hi")
-(send t setValue! #t)
-(send the-square-var setWidth 25)
 ;(define mahrect (new rect% [w 20] [h 12]))
 ;(display mahrect)
 

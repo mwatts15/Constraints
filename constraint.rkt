@@ -174,7 +174,7 @@
     (super-new)
     (define v 'unset)
     (define informant false)
-    (field [constraints '()])
+    (define constraints '())
     (define (hasValue?)
       (if informant true false))
     (define (set newval setter)
@@ -188,6 +188,8 @@
                (send x resolve))]
             [((compose not eq?) v newval)
              (raise (exn:contradiction newval v))]))
+    (define (informant? c)
+      (eq? c informant))
 
     (define (requestSetValue! newval setter)
       (cond [(send this hasValue?)
@@ -222,6 +224,7 @@
       getConstraints
       hasValue?
       connect
+      informant?
       getValue)))
 
 ; holds a constant and matches the value of its sole connector.
