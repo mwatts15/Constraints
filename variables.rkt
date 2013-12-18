@@ -8,7 +8,7 @@
     (init [name (gensym)])
     (define _name name)
 
-    (define (set newval [setter this])
+    (define (set newval setter)
       ;(display `(setting ,this with ,newval from ,setter))(newline)
       (and (send this informant? setter)
            (send this forgetValue! setter))
@@ -16,10 +16,8 @@
 
     (define (getName)
       _name)
-    (define (getMembers)
-      (field-names this))
     (override (set setValue!))
-    (public getMembers getName)))
+    (public getName)))
 
 (define ObjectV
   (class Variable

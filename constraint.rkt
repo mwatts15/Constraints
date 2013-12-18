@@ -1,16 +1,18 @@
 #lang racket
+
 (require (prefix-in V: "value.rkt"))
 (provide (all-defined-out))
 
 (define unset?
   (curry eq? 'unset))
+(define is-set?
+  (negate unset?))
 (define Constraint
   (class* object% (writable<%>)
     (super-new)
     [init (ports '())]
-    (field 
-      [connectors (make-hash (map (lambda (l) (cons l 'unset))
-                                   ports))])
+    (define connectors (make-hash (map (lambda (l) (cons l 'unset))
+                                       ports)))
     (define (custom-write out)
       (display this% out)
       (write (dict-keys connectors) out))
@@ -25,6 +27,11 @@
 
     (define (reevaluate)
       (for ([(_ c) connectors])
+           (and (object-method-arity-includes?
+                  c 
+                  'getName 0)
+                (display `(telling ,(send c getName) to forget. forget. forget...))
+                (newline))
         (send c forgetValue! this))
       (send this resolve))
 
@@ -36,86 +43,15 @@
 
     (define (getPort port-name)
       (hash-ref connectors port-name))
+    (define (connectorNames)
+      (dict-keys connectors))
 
     (public getPort 
             resolve reevaluate 
+            connectorNames
             disconnect attach)
     ; for writeable<%>
     (public custom-write custom-display)))
-
-(define Not
-  (class Constraint
-    (super-new (ports '(arg out)))
-    (inherit getPort)
-    (define/override (resolve)
-      (let ([arg (getPort 'arg)]
-            [out (getPort 'out)])
-        (if (or (send arg hasValue?) (send out hasValue?))
-          (cond [(send arg hasValue?)
-                 (send out setValue! (not (send arg getValue)) this)]
-                [(send out hasValue?)
-                 (send arg setValue! (not (send out getValue)) this)])
-          false)))))
-
-(define Or
-  (class Constraint
-    (super-new (ports '(arg1 arg2 out)))
-    (inherit getPort)
-
-    ; resolves the value at the given port if possible
-    (define/override (resolve)
-      (let ([a1 (getPort 'arg1)]
-            [a2 (getPort 'arg2)]
-            [o (getPort 'out)]
-            [v1 (send (getPort 'arg1) getValue)]
-            [v2 (send (getPort 'arg2) getValue)]
-            [vo (send (getPort 'out) getValue)])
-        (cond [(and (send a1 hasValue?) (send a2 hasValue?))
-               (send o setValue! (or v1 v2) this)]
-              [(or (and (send a1 hasValue?) (eq? true v1))
-                   (and (send a2 hasValue?) (eq? true v2)))
-               (send o setValue! true this)]
-              [(and (send o hasValue?) (eq? false vo))
-               (send a1 setValue! false this)
-               (send a2 setValue! false this)]
-              [(and (send a1 hasValue?) (send o hasValue?) (not v1))
-               (send a2 setValue! vo this)]
-              [(and (send a2 hasValue?) (send o hasValue?) (not v2))
-               (send a1 setValue! vo this)])))))
-
-(define And
-  (class Constraint
-    (super-new (ports '(arg1 arg2 out)))
-    (inherit getPort)
-
-    ; resolves the value at the given port if possible
-    (define/override (resolve)
-      ;(display "calling resolve for And")(newline)
-      (let ([a1 (getPort 'arg1)]
-            [a2 (getPort 'arg2)]
-            [o (getPort 'out)]
-            [v1 (send (getPort 'arg1) getValue)]
-            [v2 (send (getPort 'arg2) getValue)]
-            [vo (send (getPort 'out) getValue)])
-        (cond [(and (send a1 hasValue?) (send a2 hasValue?))
-               (send o setValue! (and v1 v2) this)]
-              [(or (and (send a1 hasValue?) (eq? false v1))
-                   (and (send a2 hasValue?) (eq? false v2)))
-               (send o setValue! false this)]
-              [(and (send o hasValue?) (eq? true vo))
-               (send a1 setValue! true this)
-               (send a2 setValue! true this)]
-              [(and (send a1 hasValue?)
-                    (send o hasValue?) 
-                    (not (unset? vo))
-                    (eq? false v1))
-               (send a2 setValue! vo this)]
-              [(and (send a2 hasValue?) 
-                    (send o hasValue?) 
-                    (not (unset? vo))
-                    (eq? true v2))
-               (send a1 setValue! vo this)]
-              [else 'nothing-to-do])))))
 
 (define-syntax-rule (PredicateConstraint name pred? satisfier)
   (define name
@@ -161,9 +97,53 @@
 (PredicateConstraint Box (lambda (x) (is-a? x V:Box)) thunk)
 (PredicateConstraint Even even? thunk)
 (PredicateConstraint Odd odd? thunk)
+
+(define List
+  (class Constraint
+    (super-new (ports '(head tail list)))
+    (inherit getPort)
+    (define/override (resolve)
+      (let ([o (getPort 'list)]
+            [t (getPort 'tail)]
+            [f (getPort 'head)])
+        (let ([ov (send o getValue)]
+              [tv (send t getValue)]
+              [fv (send f getValue)])
+          (cond [(and (is-set? tv)
+                      (is-set? fv))
+                 (send o setValue! (cons fv tv) this)]
+                [(is-set? ov)
+                 (send t setValue! (rest ov) this)
+                 (send f setValue! (first ov) this)]))))))
+(define Array
+  (class Constraint
+    (super-new (ports '(index value array)))
+    (inherit getPort)
+    (define/override (resolve)
+      (let ([a (getPort 'array)]
+            [i (getPort 'index)]
+            [v (getPort 'value)])
+        (let ([av (send a getValue)]
+              [iv (send i getValue)]
+              [vv (send v getValue)])
+          (cond [(and (is-set? vv)
+                      (is-set? iv)
+                      (is-set? av))
+                 (let ([vec (send a getValue)])
+                   (vector-set! vec iv vv) 
+                   (send a setValue! vec this))]
+                [(and (is-set? av)
+                      (is-set? iv))
+                 (let ([vec (send a getValue)])
+                   (send v setValue! (vector-ref vec iv) this))]
+                [(and (is-set? av)
+                      (is-set? vv))
+                 (let ([vec (send a getValue)])
+                   (send i setValue! (vector-member vv vec) this))]))))))
+
                 
 (define (exn:contradiction actual expected)
-  (list 'contradiction expected actual))
+  (list 'contradiction ': 'expected expected 'got actual))
 (define (exn:contradiction? maybe-exn)
   (if (list? maybe-exn)
     (eq? 'contradiction (first maybe-exn))
@@ -192,6 +172,7 @@
       (eq? c informant))
 
     (define (requestSetValue! newval setter)
+      (display `(attempting to switch ,v to ,newval))(newline)
       (cond [(send this hasValue?)
              (forget informant)
              (set newval setter)]
@@ -202,6 +183,7 @@
            (set! informant false)
            (for ([x constraints]
                  #:unless (eq? x retractor))
+             (display `(reevaluating ,x))(newline)
              (send x reevaluate))))
 
     (define (getValue)
@@ -233,8 +215,7 @@
   (class Constraint
     (super-new (ports '(out)))
     (inherit getPort)
-    (init [value 'unset])
-    (define v value)
+    (define v 'unset)
 
     (define (set newval)
       (send (getPort 'out) forgetValue! this)
@@ -248,7 +229,7 @@
     (define/override (resolve)
       (let* ([p (getPort 'out)])
         (and (not (unset? v))
-             (send p setValue! v))))
+             (send p setValue! v this))))
 
     (public
       (set setValue!)

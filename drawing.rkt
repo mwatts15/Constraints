@@ -3,12 +3,14 @@
 (require racket/draw)
 (require "constraint.rkt")
 (require "variables.rkt")
+(require trace)
 
 (define no-pen (new pen% [style 'transparent]))
 (define no-brush (new brush% [style 'transparent]))
 (define blue-brush (new brush% [color "blue"]))
 (define yellow-brush (new brush% [color "yellow"]))
 (define red-pen (new pen% [color "red"] [width 2]))
+(define black-pen (new pen% [color "black"] [width 2]))
 
 (define Drawable
   (interface () draw))
@@ -31,14 +33,24 @@
     (define _x (get-field x connector))
     (define _y (get-field y connector))
     (define _width (get-field width connector))
+    (define (getMembers)
+      (values (list "x" "y" "width")
+              (map (lambda (x) (format "~a" x))
+                   (list (send _x getValue)
+                    (send _y getValue)
+                    (send _width getValue)))))
     (define _currPos (make-point 0 0))
-    (define _currWidth 20)
+    (define _currWidth 50)
     (define _name (send connector getName)) 
     (define _dc drawingContext)
+    (define _outline black-pen)
 
     (define (setPos p)
       (send _x setValue! (send p get-x) this)
       (send _y setValue! (send p get-y) this))
+
+    (define (getPos)
+      _currPos)
 
     (define (setWidth w)
       (send _width setValue! w this))
@@ -50,11 +62,18 @@
            (send _currPos set-y (send _y getValue)))
       (and (send _width hasValue?)
            (set! _currWidth (send _width getValue)))
+      (send _dc set-pen _outline)
       (send _dc set-brush blue-brush)
       (send _dc draw-rectangle (send _currPos get-x)
             (send _currPos get-y) _currWidth _currWidth))
 
     (define (reevaluate) (resolve))
+
+    (define (setOutilne color)
+      (cond [(eq? color "red")
+             (set! _outline red-pen)]
+            [(eq? color "black")
+             (set! _outline black-pen)]))
 
     (define (disconnect port)
       (error "nope"))
@@ -78,11 +97,23 @@
     (connect _width this)
 
     (public setPos setWidth resolve reevaluate 
+            getPos
+            getMembers
+            setOutilne
             inside? getName
             disconnect attach)))
 
 (define (make-point x y)
   (make-object point% x y))
+
+; add a point to a vector
+(define (add/pv p v)
+  (make-object point% (+ (send p get-x) (send v get-x))
+               (+ (send p get-y) (send v get-y))))
+
+(define (sub/pp p1 p2)
+  (make-object point% (- (send p1 get-x) (send p2 get-x))
+               (- (send p1 get-y) (send p2 get-y))))
 
 ; vars have can contain many variables, each with a name
 ; a var is analogous to a rule in prolog and can contain
@@ -122,8 +153,11 @@
 
 
     (define (setSelected objectID)
+      (and (not (unset? _selected))
+           (send (dict-ref _objects _selected) setOutilne "black"))
+      (send (dict-ref _objects objectID) setOutilne "red")
       (set! _selected objectID)
-      (onSelectionChange))
+      (onSelectionChange this))
 
     (define (setSelectedByLocation location)
       (let ([candidateSelections 
@@ -133,7 +167,9 @@
                 (dict-keys _objects))])
         (if (empty? candidateSelections)
           #f
-          (setSelected (first candidateSelections)))))
+          (begin 
+            (setSelected (first candidateSelections))
+            #t))))
 
     (define (getSelected)
       (hash-ref _objects _selected))
@@ -151,21 +187,26 @@
 
     (define (draw)
       (send _dc clear)
-      (for ([o (in-dict-values _objects)])
+      (for ([(name o) _objects])
         (send o resolve)))
-    (public draw newRepresentation setSelectedByLocation setSelected getSelected sendSelected)))
+    (public draw newRepresentation setSelectedByLocation setSelected sendSelected)))
 
 
 
 (define draw-canvas%
   (class canvas%
-    (super-new )
+    (super-new)
 
     (define dc (send this get-dc))
 
     (define state (new State))
 
-    (define rep (new Representation [drawingContext dc]))
+    (define rep (new Representation [drawingContext dc]
+                     [selectionCallback updateSelectedAttributes]))
+
+    ; selection and dragging
+    (define objectShouldDrag? #f) ; should the selected object be dragged?
+    (define dragOffset (make-point 0 0)) ; offset of mouse from object location when dragging
 
     (define/public (add-square)
       (send rep newRepresentation SquareRep
@@ -173,13 +214,17 @@
       (redraw))
 
     (define/override (on-subwindow-event receiver event)
-      (let-values ([(x y) (values (send event get-x) (send event get-y))])
-        (cond [(send event button-down?)
-               (send rep setSelectedByLocation (make-point x y))
-               (display `(selected is ,(send rep sendSelected 'getName)))(newline)
+      (let ([cursorPoint (make-point (send event get-x) (send event get-y))])
+        ; selection
+        (cond [(and (send event button-down?)
+                    (send rep setSelectedByLocation cursorPoint))
+               (set! objectShouldDrag? #t)
+               (set! dragOffset (sub/pp (send rep sendSelected 'getPos) cursorPoint))
                (redraw)]
-              [(send event dragging?)
-               (send rep sendSelected 'setPos (make-point x y))
+              [(send event button-up?)
+               (set! objectShouldDrag? #f)]
+              [(and (send event dragging?) objectShouldDrag?)
+               (send rep sendSelected 'setPos (add/pv cursorPoint dragOffset))
                (redraw)])))
 
     (define (redraw)
@@ -191,11 +236,21 @@
 
 (define w (new my-frame% [label "Silly window"]))
 
-;(define selectedAttributesView
-  ;(new list-box% [label "Variables"] [choices '("no constraints")] [parent w]))
+(define ListBoxRep
+  (class list-box%
+    [init parent variable]
+    (super-new [label "Variables"]
+       [choices '("no constraints")]
+       [parent w]
+       [style '(multiple)]
+       [columns '("name" "value")])))
 
-;(define (updateSelectedAttributes)
-  ;(send selectedAttributesView set (list "updated selected attributes")))
+(define selectedAttributesView
+  (new ListBoxRep [parent w]))
+
+(define (updateSelectedAttributes rep)
+  (let-values ([(names values) (send rep sendSelected 'getMembers)])
+    (send selectedAttributesView set names values)))
 
 (define the-canvas (new draw-canvas% [parent w]))
 
