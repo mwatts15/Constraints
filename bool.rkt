@@ -5,7 +5,7 @@
 
 (define Not
   (class Constraint
-    (super-new (ports '(arg out)))
+    (super-new (ports '(arg out))(name 'Not))
     (inherit getPort)
     (define/override (resolve)
       (let ([arg (getPort 'arg)]
@@ -19,7 +19,7 @@
 
 (define Or
   (class Constraint
-    (super-new (ports '(lhs rhs out)))
+    (super-new (ports '(lhs rhs out))(name 'Or))
     (inherit getPort)
 
     ; resolves the value at the given port if possible
@@ -45,7 +45,7 @@
 
 (define And
   (class Constraint
-    (super-new (ports '(lhs rhs out)))
+    (super-new (ports '(lhs rhs out))(name 'And))
     (inherit getPort)
 
     ; resolves the value at the given port if possible
@@ -57,43 +57,37 @@
              [v1 (send a1 getValue)]
              [v2 (send a2 getValue)]
              [vo (send o getValue)])
-        (cond [(and (send a1 hasValue?) (send a2 hasValue?))
+        (cond [(and (is-set? v1)
+                    (is-set? v2))
                (send o setValue! (and v1 v2) this)]
-              [(or (and (send a1 hasValue?) (eq? false v1))
-                   (and (send a2 hasValue?) (eq? false v2)))
+              [(or (eq? false v1)
+                   (eq? false v2))
                (send o setValue! false this)]
-              [(and (send o hasValue?) (eq? true vo))
+              [(eq? true vo)
                (send a1 setValue! true this)
                (send a2 setValue! true this)]
-              [(and (send a1 hasValue?)
-                    (send o hasValue?) 
-                    (not (unset? vo))
-                    (eq? false v1))
+              [(and (is-set? vo)
+                    (eq? true v1))
                (send a2 setValue! vo this)]
-              [(and (send a2 hasValue?) 
-                    (send o hasValue?) 
-                    (not (unset? vo))
+              [(and (is-set? vo)
                     (eq? true v2))
-               (send a1 setValue! vo this)]
-              [else 'nothing-to-do])))))
+               (send a1 setValue! vo this)])))))
 
 (define Equal
   (class Constraint
-    (super-new (ports '(lhs rhs out)))
+    (super-new (ports '(lhs rhs out))(name 'Equal))
     (inherit getPort)
     (define/override (resolve)
       (let ([lhs (getPort 'lhs)]
-            [out (getPort 'out)]
-            [rhs (getPort 'rhs)])
+            [rhs (getPort 'rhs)]
+            [out (getPort 'out)])
         (let ([lv (send lhs getValue)]
               [rv (send rhs getValue)]
               [ov (send out getValue)])
           (cond [(and (is-set? lv)
-                      (is-set? ov)
                       (eq? true ov))
                  (send rhs setValue! lv this)]
                 [(and (is-set? rv)
-                      (is-set? ov)
                       (eq? true ov))
                  (send lhs setValue! rv this)]
                 [(and (is-set? rv)

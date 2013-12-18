@@ -10,12 +10,12 @@
 (define Constraint
   (class* object% (writable<%>)
     (super-new)
-    [init (ports '())]
+    (init (ports '()))
+    (init-field [name 'GenericConstraint])
     (define connectors (make-hash (map (lambda (l) (cons l 'unset))
                                        ports)))
     (define (custom-write out)
-      (display this% out)
-      (write (dict-keys connectors) out))
+      (display name out))
 
     (define (custom-display out)
       (send this custom-write out))
@@ -26,12 +26,8 @@
       (error "abstract"))
 
     (define (reevaluate)
-      (for ([(_ c) connectors])
-           (and (object-method-arity-includes?
-                  c 
-                  'getName 0)
-                (display `(telling ,(send c getName) to forget. forget. forget...))
-                (newline))
+      (for ([(k c) connectors])
+        ;(display k)(newline)
         (send c forgetValue! this))
       (send this resolve))
 
@@ -142,23 +138,34 @@
                    (send i setValue! (vector-member vv vec) this))]))))))
 
                 
-(define (exn:contradiction actual expected)
-  (list 'contradiction ': 'expected expected 'got actual))
+(define (exn:contradiction oldval newval connector)
+  (list 'contradiction ': 'setting newval 'from oldval 'on connector))
+
 (define (exn:contradiction? maybe-exn)
   (if (list? maybe-exn)
     (eq? 'contradiction (first maybe-exn))
     false))
 
 (define Connector
-  (class object%
+  (class* object% (writable<%>)
     (super-new)
+    (init [name (gensym)])
+    (define _name name)
     (define v 'unset)
     (define informant false)
     (define constraints '())
     (define (hasValue?)
       (if informant true false))
+
+    (define (custom-write out)
+      (display _name out)(display constraints out))
+
+    (define (custom-display out)
+      (send this custom-write out))
+
     (define (set newval setter)
       ;(printf "~a setting ~a to ~a~n" setter this newval)
+      (display `(,setter settting ,this to ,newval from ,v))(newline)
       (cond [(not (send this hasValue?))
              (set! v newval)
              (set! informant setter)
@@ -167,9 +174,12 @@
                   ;(display `(resolve ,x))
                (send x resolve))]
             [((compose not eq?) v newval)
-             (raise (exn:contradiction newval v))]))
+             (raise (exn:contradiction v newval this))]))
     (define (informant? c)
       (eq? c informant))
+
+    (define (getName)
+      _name)
 
     (define (requestSetValue! newval setter)
       (display `(attempting to switch ,v to ,newval))(newline)
@@ -180,10 +190,11 @@
 
     (define (forget retractor)
       (and (eq? retractor informant)
+           (display `(,retractor retracting on ,this))(newline)
            (set! informant false)
+           (set! v 'unset)
            (for ([x constraints]
                  #:unless (eq? x retractor))
-             (display `(reevaluating ,x))(newline)
              (send x reevaluate))))
 
     (define (getValue)
@@ -199,6 +210,7 @@
     (define (getConstraints)
       constraints)
 
+    (public custom-write custom-display)
     (public
       (forget forgetValue!)
       (set setValue!)
@@ -207,6 +219,7 @@
       hasValue?
       connect
       informant?
+      getName
       getValue)))
 
 ; holds a constant and matches the value of its sole connector.

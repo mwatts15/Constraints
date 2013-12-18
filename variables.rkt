@@ -5,8 +5,6 @@
 (define Variable
   (class Connector
     (super-new)
-    (init [name (gensym)])
-    (define _name name)
 
     (define (set newval setter)
       ;(display `(setting ,this with ,newval from ,setter))(newline)
@@ -14,10 +12,7 @@
            (send this forgetValue! setter))
       (super set newval setter))
 
-    (define (getName)
-      _name)
-    (override (set setValue!))
-    (public getName)))
+    (override (set setValue!))))
 
 (define ObjectV
   (class Variable

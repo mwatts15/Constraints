@@ -5,9 +5,10 @@
 (require (only-in (file "bool.rkt") Equal And))
 
 (provide (all-defined-out))
+(provide (all-from-out (file "bool.rkt")))
 (define Product
   (class Constraint
-    (super-new (ports '(lhs rhs product)))
+    (super-new (ports '(lhs rhs product))(name 'Product))
     (inherit getPort)
     (define/override (resolve)
       (let ([l (getPort 'lhs)]
@@ -27,7 +28,7 @@
                  (send l setValue! (/ pv rv) this)]))))))
 (define Sum
   (class Constraint
-    (super-new (ports '(lhs rhs sum)))
+    (super-new (ports '(lhs rhs sum))(name 'Sum))
     (inherit getPort)
     (define/override (resolve)
       (let ([l (getPort 'lhs)]
@@ -47,7 +48,7 @@
                  (send l setValue! (- sv rv) this)]))))))
 (define Difference
   (class Constraint
-    (super-new (ports '(lhs rhs difference)))
+    (super-new (ports '(lhs rhs difference))(name 'Diff))
     (inherit getPort)
     (define/override (resolve)
       (let ([l (getPort 'lhs)]
@@ -67,7 +68,7 @@
                  (send l setValue! (+ dv rv) this)]))))))
 (define Quotient
   (class Constraint
-    (super-new (ports '(lhs rhs quotient)))
+    (super-new (ports '(lhs rhs quotient))(name 'Quot))
     (inherit getPort)
     (define/override (resolve)
       (let ([l (getPort 'lhs)]
@@ -87,7 +88,7 @@
                  (send l setValue! (* qv rv) this)]))))))
 (define Negation
   (class Constraint
-    (super-new (ports '(arg negation)))
+    (super-new (ports '(arg negation))(name 'Neg))
     (inherit getPort)
     (define/override (resolve)
       (let ([i (getPort 'arg)]
@@ -132,12 +133,15 @@
          (regexp-match #rx"[a-z]+" (symbol->string expr))))
 
   (define (vars expr)
-    (cond [(list? expr) 
-           (apply append (map vars expr))]
-          [(var? expr) (list expr)]
-          [else '()]))
+    (let ([res (cond [(list? expr) 
+                      (apply append (map vars (rest expr)))]
+                     [(var? expr) (list expr)]
+                     [else '()])])
+      (remove-duplicates res)))
 
   (define simplifiedFormula (mathOpt formula))
+
+  (display (vars formula))(newline)(newline)
 
   (define external
     (class Constraint
@@ -149,6 +153,7 @@
       (define/override (resolve)
         #t)
       (define/override (attach p c)
+        (super attach p c)
         (for ([(ob innerName) (dict-ref vs p)])
           (connect c ob innerName)))))
 
