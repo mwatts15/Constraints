@@ -2,6 +2,7 @@
 
 (require "constraint.rkt")
 (require "variables.rkt")
+(require racket/match)
 (require (only-in (file "bool.rkt") Equal And))
 
 (provide (all-defined-out))
@@ -11,21 +12,21 @@
     (super-new (ports '(lhs rhs product))(name 'Product))
     (inherit getPort)
     (define/override (resolve)
-      (let ([l (getPort 'lhs)]
-            [r (getPort 'rhs)]
-            [p (getPort 'product)])
-        (let ([lv (send l getValue)]
-              [rv (send r getValue)]
-              [pv (send p getValue)])
-          (cond [(and (is-set? lv)
-                      (is-set? rv))
-                 (send p setValue! (* lv rv) this)]
-                [(and (is-set? lv)
-                      (is-set? pv))
-                 (send r setValue! (/ pv lv) this)]
-                [(and (is-set? rv)
-                      (is-set? pv))
-                 (send l setValue! (/ pv rv) this)]))))))
+      (let* ([l (getPort 'lhs)]
+             [r (getPort 'rhs)]
+             [p (getPort 'product)]
+             [lv (send l getValue)]
+             [rv (send r getValue)]
+             [pv (send p getValue)])
+        (cond [(and (is-set? lv)
+                    (is-set? rv))
+               (send p setValue! (* lv rv) this)]
+              [(and (is-set? lv)
+                    (is-set? pv))
+               (send r setValue! (/ pv lv) this)]
+              [(and (is-set? rv)
+                    (is-set? pv))
+               (send l setValue! (/ pv rv) this)])))))
 (define Sum
   (class Constraint
     (super-new (ports '(lhs rhs sum))(name 'Sum))
@@ -100,22 +101,47 @@
                 [(is-set? ov)
                  (send i setValue! (- ov) this)]))))))
 
-(define (mathOpt expr)
+(define (toInfix expr)
   (match expr
-    [`(+ ,x ,x) `(* 2 ,x)]
-    [`(+ ,x (+ ,x ,y)) `(+ (* 2 ,x) ,y)]
-    [`(+ ,x (- ,x ,y)) `(- ,y)]
-    [`(- ,x (+ ,x ,y)) y]
-    [`(/ 1 (/ ,x ,y)) `(/ ,y ,x)]
-    [`(/ ,x 1) x]
-    [`(- ,x 0) x]
-    [`(+ ,x 0) x]
-    [`(* ,x 1) x]
-    [`(* ,x 0) 0]
-    [`(- ,x ,x) 0]
-    [`(+ (- ,x) ,y) `(- ,y ,x)]
-    [`(- ,x (- ,y)) `(+ ,x ,y)]
-    [(list x y ...) `(,x . ,(map mathOpt y))]
+    [`(,op ,lhs ,rhs) `(,(toInfix lhs) ,op ,(toInfix rhs))]
+    [x x]))
+(define (mathOpt expr)
+  (match (match expr
+                [`(+ ,x ,x) `(* 2 ,x)]
+                [`(+ ,x (+ ,x ,y)) `(+ (* 2 ,x) ,y)]
+                [`(+ ,x (- ,x ,y)) `(- ,y)]
+                [`(- ,x (+ ,x ,y)) y]
+                [`(/ 1 (/ ,x ,y)) `(/ ,y ,x)]
+                [`(/ ,x 1) x]
+                [`(,(or '+ '-) ,x 0) x]
+                [`(* ,x 1) x]
+                [`(* ,x 0) 0]
+                [`(- ,x ,x) 0]
+                [`(+ (- ,x) ,y) `(- ,y ,x)]
+                [`(- ,x (- ,y)) `(+ ,x ,y)]
+                [`(= ,(and (not 0) x) ,y) `(= 0 (- ,y ,x))]
+                ;combining terms
+                [`(,(and (or '+ '-) op)
+                    (* ,c1 ,x)
+                    (* ,c2 ,x)) `(* (,op ,c1 ,c2) ,x)]
+                [`(,(and (or '+ '-) op)
+                    ,x
+                    (* ,c2 ,x)) `(* (,op 1 ,c2) ,x)]
+                [`(,(and (or '+ '-) op)
+                    (* ,c1 ,x)
+                    ,x) `(* (,op ,c1 1) ,x)]
+                ; heuristic: move numbers to the outside
+                [`(,(and (or '+ '-) op1)
+                    (,(and (or '+ '-) op2) ,x ,(? number? y))
+                    ,(? (negate number?) z))
+                  `(,op2 (,op1 ,x ,z) ,y)]
+                ; the 'infamous' flip rule. probably shouldn't be here...
+                [`(,(and (or '+ '*) op) ,x ,y) `(,op ,y ,x)]
+                [x x])
+         [`(,op ,x ...) (cons op (map mathOpt x))]
+         [x x]))
+(define (logOpt expr)
+  (match expr
     [x x]))
 
 (define (f->c formula [parentConstraint #f] [side #f])
@@ -141,7 +167,8 @@
 
   (define simplifiedFormula (mathOpt formula))
 
-  (display (vars formula))(newline)(newline)
+  (display `(f->c ,formula (simplified ,simplifiedFormula)))(newline)
+  (display (vars formula))(newline)
 
   (define external
     (class Constraint

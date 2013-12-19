@@ -117,6 +117,18 @@
                    (send c setValue! 2 'user)
                    (send c requestSetValue! 3 'other-user)
                    (check-eq? 3 (send c getValue))))
+      (test-case "(hasValue? c) <=> (unset? (getValue c))"
+                 (let* ([c (new Connector)])
+                   (check-false (send c hasValue?)) 
+                   (check-true (unset? (send c getValue))) 
+
+                   (send c setValue! 'aValue 'user)
+                   (check-true (send c hasValue?)) 
+                   (check-false (unset? (send c getValue))) 
+
+                   (send c forgetValue! 'user)
+                   (check-false (send c hasValue?)) 
+                   (check-true (unset? (send c getValue)))))
       (test-case "requestSetValue! contradiction"
                  (let* ([c (new Connector)]
                         [tc (new TestConstraint [value 3] [connector c])])

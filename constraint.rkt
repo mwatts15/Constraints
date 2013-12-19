@@ -164,14 +164,12 @@
       (send this custom-write out))
 
     (define (set newval setter)
-      ;(printf "~a setting ~a to ~a~n" setter this newval)
-      (display `(,setter settting ,this to ,newval from ,v))(newline)
+      ;(display `(,setter settting ,this to ,newval from ,v))(newline)
       (cond [(not (send this hasValue?))
              (set! v newval)
              (set! informant setter)
              (for ([x constraints]
                    #:unless (eq? x setter))
-                  ;(display `(resolve ,x))
                (send x resolve))]
             [((compose not eq?) v newval)
              (raise (exn:contradiction v newval this))]))
@@ -182,7 +180,7 @@
       _name)
 
     (define (requestSetValue! newval setter)
-      (display `(attempting to switch ,v to ,newval))(newline)
+      ;(display `(attempting to switch ,v to ,newval))(newline)
       (cond [(send this hasValue?)
              (forget informant)
              (set newval setter)]
@@ -190,7 +188,7 @@
 
     (define (forget retractor)
       (and (eq? retractor informant)
-           (display `(,retractor retracting on ,this))(newline)
+           ;(display `(,retractor retracting on ,this))(newline)
            (set! informant false)
            (set! v 'unset)
            (for ([x constraints]
@@ -203,9 +201,7 @@
     (define (connect new-constraint)
       ;(display `(connecting ,new-constraint to ,this)) (newline)
       (and (not (memq new-constraint constraints))
-           ;(display 'here) (newline)
            (set! constraints (cons new-constraint constraints))))
-           ;(display constraints) (newline)))
 
     (define (getConstraints)
       constraints)

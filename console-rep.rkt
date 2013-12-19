@@ -15,5 +15,5 @@
     (define (disconnect port)
       (error "nope"))
     (define (resolve)
-      (display `(,(send c getName) = ,(send c getValue))) (newline))
+      (and (send c hasValue?) (display `(,(send c getName) = ,(send c getValue))) (newline)))
     (public resolve reevaluate attach disconnect)))
