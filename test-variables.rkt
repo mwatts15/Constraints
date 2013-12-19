@@ -7,9 +7,9 @@
 
 (define TestVar
   (class Variable
-    (field [x (new Variable)]
-           [y (new Variable)])
-    (super-new)))
+    (super-new)
+    (inherit declareMembers)
+    (declareMembers '(x y))))
 
 (define TestEqualConstraint
   (class Constraint
@@ -39,14 +39,14 @@
     (test-suite "ObjectV"
       (test-case "check position"
                  (let ([o (new ObjectV)])
-                   (let ([x (send (get-field x o) getValue)]
-                         [y (send (get-field y o) getValue)])
+                   (let ([x (send (getMember o x) getValue)]
+                         [y (send (getMember o y) getValue)])
                      (check-eq? x 'unset)
                      (check-eq? y 'unset)))))
     (test-suite "Variable"
       (test-case "with members"
                  (let ([v (new TestVar)])
-                   (check-pred unset? (send (get-field x v) getValue))))
+                   (check-pred unset? (send (getMember v x) getValue))))
       (test-case "multiple constraints on one variable"
                  (let* ([c (new TestVar)]
                         [tc1 (new TestConstraint_resolved [connector c])]
@@ -54,17 +54,18 @@
                         [tc3 (new TestConstraint_resolved [connector c])])
                    (for ([x (list tc1 tc2 tc3)])
                      (check-false (send x isResolved?)))
-                   (send c setValue! 5)
+                   (send c setValue! 5 'user)
                    (for ([x (list tc1 tc2 tc3)])
                      (check-true (send x isResolved?))))))
     (test-suite "Constraint"
       (test-case "on members"
                  (let* ([v (new TestVar)]
-                        [c (new TestEqualConstraint)])
-                   (connect (get-field y v) c 'rhs)
-                   (connect (get-field x v) c 'lhs)
-                   (send (get-field y v) setValue! 2)
-                   (check-eq? (send (get-field x v) getValue) 2))))
-    ))
+                        [c (new TestEqualConstraint)]
+                        [vy (getMember v y)]
+                        [vx (getMember v x)])
+                   (connect vy c 'rhs)
+                   (connect vx c 'lhs)
+                   (send vy setValue! 2 'user)
+                   (check-eq? (send vx getValue) 2))))))
 (for ([t tests])
   (run-tests t 'verbose))

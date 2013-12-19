@@ -30,9 +30,12 @@
     (init drawingContext)
     (init connector)
 
-    (define _x (get-field x connector))
-    (define _y (get-field y connector))
-    (define _width (get-field width connector))
+    (define _c connector)
+    (define _x (getMember connector x))
+    (define _y (getMember connector y))
+    (define _width (getMember connector w))
+    (define (getVar)
+      _c)
     (define (getMembers)
       (values (list "x" "y" "width")
               (map (lambda (x) (format "~a" x))
@@ -97,6 +100,7 @@
     (connect _width this)
 
     (public setPos setWidth resolve reevaluate 
+            getVar
             getPos
             getMembers
             setOutilne
@@ -191,8 +195,6 @@
         (send o resolve)))
     (public draw newRepresentation setSelectedByLocation setSelected sendSelected)))
 
-
-
 (define draw-canvas%
   (class canvas%
     (super-new)
@@ -238,19 +240,31 @@
 
 (define ListBoxRep
   (class list-box%
-    [init parent variable]
+    (init parent)
     (super-new [label "Variables"]
        [choices '("no constraints")]
        [parent w]
        [style '(multiple)]
-       [columns '("name" "value")])))
+       [columns '("name" "value")])
+    (define _v 'unset)
+    (define (setVar v)
+      (set! _v v)
+      (for ([m (send _v memberNames)])
+        (connect m this)))
+    (define (attach p c) #f)
+    (define (resolve)
+      (display 'here)
+      (send this clear)
+      (for ([m (send _v memberNames)])
+        (send this append m)))
+    (public attach resolve setVar)))
 
 (define selectedAttributesView
   (new ListBoxRep [parent w]))
 
 (define (updateSelectedAttributes rep)
-  (let-values ([(names values) (send rep sendSelected 'getMembers)])
-    (send selectedAttributesView set names values)))
+  (let ([v (send rep sendSelected 'getVar)])
+    (send selectedAttributesView setVar v)))
 
 (define the-canvas (new draw-canvas% [parent w]))
 
