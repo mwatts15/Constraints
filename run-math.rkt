@@ -48,7 +48,7 @@
       (connect tvar e 't)
       (for ([t (in-range 10)])
         (display `(t is ,t))(newline)
-        (send tvar setValue! t 'user)))
+        (send tvar setValue! t 'user #:forget true)))
 
 (mathOpt (mathOpt (mathOpt '(= (- (+ (expt x 2) (* 3 x)) 2)
              (- (+ (- (+ (* 4 (expt x 2))

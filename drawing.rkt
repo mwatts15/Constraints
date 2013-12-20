@@ -247,17 +247,30 @@
        [style '(multiple)]
        [columns '("name" "value")])
     (define _v 'unset)
+    ; a list of the string versions of the options
+    ; only changes on a setvar
+    (define _options (hash))
+
     (define (setVar v)
-      (set! _v v)
-      (for ([m (send _v memberNames)])
-        (connect m this)))
-    (define (attach p c) #f)
-    (define (resolve)
-      (display 'here)
       (send this clear)
-      (for ([m (send _v memberNames)])
-        (send this append m)))
-    (public attach resolve setVar)))
+      (set! _v v)
+      (set! _options
+        (for/vector ([m (send _v memberNames)])
+          (let ([mstr (format "~a" m)]
+                [mv (send _v getMember m)])
+            (connect mv this)
+            (send this append mstr)
+            (list mstr mv)))))
+
+    (define (attach p c) #f)
+    (define (reevaluate) (resolve))
+    (define (resolve)
+      (for ([(data idx) (in-indexed _options)])
+        (let ([varname (first data)]
+              [value (format "~a" (send (second data) getValue))])
+          (send this set-string idx varname 0)
+          (send this set-string idx value 1))))
+    (public attach resolve reevaluate setVar)))
 
 (define selectedAttributesView
   (new ListBoxRep [parent w]))

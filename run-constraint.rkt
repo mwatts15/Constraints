@@ -1,7 +1,9 @@
 #lang racket
 
+(require "bool.rkt")
 (require "constraint.rkt")
 (require "variables.rkt")
+(require "console-rep.rkt")
 (require (prefix-in V: "value.rkt"))
 
 ; constraint representation for boolean expression:
@@ -17,18 +19,18 @@
       [y (new Variable [name 'y])]
       [z (new Variable [name 'z])]
       [result (new Variable [name 'result])])
-  (connect x a1 'arg1)
-  (connect y a1 'arg2)
-  (connect x a2 'arg1)
+  (connect x a1 'lhs)
+  (connect y a1 'rhs)
+  (connect x a2 'lhs)
   (connect z n1 'arg)
-  (connectConstraints n1 'out a2 'arg2)
-  (connectConstraints o1 'arg1 a1 'out)
-  (connectConstraints o1 'arg2 a2 'out)
-  (connect z a3 'arg1)
+  (connectConstraints n1 'out a2 'rhs)
+  (connectConstraints o1 'lhs a1 'out)
+  (connectConstraints o1 'rhs a2 'out)
+  (connect z a3 'lhs)
   (connect y n2 'arg)
-  (connectConstraints n2 'out a3 'arg2)
-  (connectConstraints o2 'arg1 o1 'out)
-  (connectConstraints o2 'arg2 a3 'out)
+  (connectConstraints n2 'out a3 'rhs)
+  (connectConstraints o2 'lhs o1 'out)
+  (connectConstraints o2 'rhs a3 'out)
   (connect result o2 'out)
 
   (send x setValue! false)
