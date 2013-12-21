@@ -1,6 +1,5 @@
 #lang racket
 
-(require (prefix-in V: "value.rkt"))
 (provide (all-defined-out))
 
 (define unset?
@@ -87,10 +86,6 @@
                      [(and (send o2x hasValue?) (send o1w hasValue?))
                       (send o1x setValue! (- (send o2x getValue) (send o1w getValue)) this)]))))))
 
-(PredicateConstraint ValBox 
-                     (lambda (x) (is-a? x V:ValueBox)) 
-                     (lambda (x) (new V:ValueBox [value x])))
-(PredicateConstraint Box (lambda (x) (is-a? x V:Box)) thunk)
 (PredicateConstraint Even even? thunk)
 (PredicateConstraint Odd odd? thunk)
 
@@ -136,8 +131,25 @@
                       (is-set? vv))
                  (let ([vec (send a getValue)])
                    (send i setValue! (vector-member vv vec) this))]))))))
+(define Square
+  (class Constraint
+    (super-new (ports '(side rectangle)))
+    (inherit getPort)
+    (define/override (resolve)
+      (let* ([s (getPort 'side)]
+             [r (getPort 'rectangle)]
+             [sv (send s getValue)]
+             [rv (send r getValue)])
+        (cond [(is-set? sv)
+               (set-field! w rv sv)
+               (set-field! h rv sv)
+               (send r setValue! rv)]
+              [(is-set? rv)
+               (let ([w (get-field w rv)])
+                 (set-field! h rv w)
+                 (send s setValue! w)
+                 (send r setValue! rv))])))))
 
-                
 (define (exn:contradiction oldval newval connector)
   (list 'contradiction ': 'setting newval 'from oldval 'on connector))
 
@@ -187,7 +199,7 @@
             [else (set newval setter)]))
 
     (define (forget retractor)
-      (and (eq? retractor informant)
+      (when (eq? retractor informant)
            ;(display `(,retractor retracting on ,this))(newline)
            (set! informant false)
            (set! v 'unset)
@@ -217,6 +229,13 @@
       informant?
       getName
       getValue)))
+
+(define ConnectorObserver
+  (class object%
+    (define (attach . _) #t)
+    (define (resolve . _) #t)
+    (define (reevaluate . _) #t)
+    (public attach resolve reevaluate)))
 
 ; holds a constant and matches the value of its sole connector.
 ; change the value though the methods setValue! and forgetValue!

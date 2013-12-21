@@ -1,22 +1,15 @@
 #lang racket
 
+(require (only-in racket/draw point%))
 (provide (all-defined-out))
 
-(define Box
+(define Rectangle 
   (class object%
-    (init [_initializer false])
-    (if (is-a? _initializer Box)
-      ; copy data
-      #t
-      #f)
-    (super-new)))
+    (super-new)
+    (field [x 0] [y 0] [w 2] [h 2])))
 
-(define ValueBox
-  (class Box
-    (init [value false])
-    (if (is-a? value Box)
-      (super-make-object value)
-      (super-new))))
+(define (make-point x y)
+  (make-object point% x y))
 
 (define Set
   (interface () is-subset? is-member?))
