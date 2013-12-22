@@ -1,8 +1,25 @@
 #lang racket
 (require "value.rkt")
-(require "constraint.rkt")
+(require (only-in "constraint.rkt" Connector))
 (provide (all-defined-out))
 ; queries and actions on rectangles
+(define List
+  (class object%
+    (super-new)
+    [init connector]
+    (define _c connector)
+    (define _p (make-point 0 0))
+    (define (getPos)
+      _p)
+    (define (setPos p)
+      (set! _p p))
+
+    (define (_cons o)
+      (let ([l (send _c getValue)])
+        (send _c forgetValue! this)
+        (send _c setValue! (cons o l) this)))
+    (public getPos setPos (_cons cons))))
+
 (define RectangleControl
   (class object%
     (super-new)
@@ -38,15 +55,4 @@
                [y (get-field y r)])
           (make-point x y))))
 
-    (define (inside? p)
-      (if (send _c hasValue?)
-        (let* ([r (send _c getValue)]
-               [px (send p get-x)]
-               [py (send p get-y)]
-               [x (get-field x r)]
-               [y (get-field y r)]
-               [w (get-field w r)]
-               [h (get-field h r)])
-          (and (> px x) (> py y) (< px (+ x w)) (< py (+ y h))))
-        #f))
-    (public setHeight setWidth setPos getPos inside?)))
+    (public setHeight setWidth setPos getPos)))

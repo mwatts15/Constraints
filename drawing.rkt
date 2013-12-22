@@ -13,22 +13,13 @@
 (define red-pen (new pen% [color "red"] [width 2]))
 (define black-pen (new pen% [color "black"] [width 2]))
 
-; add a point to a vector
-(define (add/pv p v)
-  (make-object point% (+ (send p get-x) (send v get-x))
-               (+ (send p get-y) (send v get-y))))
-
-(define (sub/pp p1 p2)
-  (make-object point% (- (send p1 get-x) (send p2 get-x))
-               (- (send p1 get-y) (send p2 get-y))))
-
-
 ; a store for drawable objects. resonds to draw and holds a canvas
 (define ObjectStore
   (class object% 
     (super-new)
     (define _selected #f)
-    (define _types (make-hash `(("Rectangle" . ,O:Rectangle))))
+    (define _types (make-hash `(("Rectangle" . ,O:Rectangle)
+                                ("List" . ,O:List))))
     (define _objects (make-hash))
     (init drawingContext)
     (init [selectionCallback void])
@@ -66,12 +57,14 @@
           (cond [(not (dict-has-key? _objects base)) name]
                 [(not (dict-has-key? _objects n)) n]
                 [#t (getName base (add1 i))])))
-      (dict-set! _objects (getName name 0) (new (dict-ref _types type) [drawingContext dc])))
+      (let ([n (getName name 0)]
+            [typeClass (dict-ref _types type)])
+        (dict-set! _objects n (new typeClass [drawingContext dc]))
+        (setSelected n)))
 
     (define (draw)
       (send _dc clear)
       (for ([(name o) _objects])
-        (display 'drawing-here)(newline)
         (let* ([p (send o -> 'getPos)]
                [x (send p get-x)]
                [y (send p get-y)]
@@ -87,9 +80,14 @@
   (class bitmap-dc%
     (super-new [bitmap (make-screen-bitmap 1 1)])
     (define (requestSize w h)
-      (let-values ([(cw ch) (send this get-size)])
-        (when (not (and (= w cw) (= h ch)))
-          (send this set-bitmap (make-screen-bitmap w h)))))
+      (let ([w (inexact->exact w)]
+            [h (inexact->exact h)])
+        (let-values ([(cw ch) (send this get-size)])
+          (when (not (and (<= w cw) (<= h ch)))
+            (let* ([b (make-screen-bitmap w h)]
+                   [bdc (make-object bitmap-dc% b)])
+              (send bdc draw-bitmap (send this get-bitmap) 0 0)
+              (send this set-bitmap b))))))
     (public requestSize)))
 
 (define draw-canvas%
@@ -119,56 +117,30 @@
 
 (define w (new my-frame% [label "Silly window"]))
 
-;(define ListBoxRep
-  ;(class list-box%
-    ;(init parent)
-    ;(super-new [label "Variables"]
-       ;[choices '("no constraints")]
-       ;[parent w]
-       ;[style '(multiple)]
-       ;[columns '("name" "value")])
-    ;(define _v 'unset)
-    ;; a list of the string versions of the options
-    ;; only changes on a setvar
-    ;(define _options (hash))
-
-    ;(define (setVar v)
-      ;(send this clear)
-      ;(set! _v v)
-      ;(set! _options
-        ;(for/vector ([m (send _v memberNames)])
-          ;(let ([mstr (format "~a" m)]
-                ;[mv (send _v getMember m)])
-            ;(connect mv this)
-            ;(send this append mstr)
-            ;(list mstr mv)))))
-
-    ;(define (attach p c) #f)
-    ;(define (reevaluate) (resolve))
-    ;(define (resolve)
-      ;(for ([(data idx) (in-indexed _options)])
-        ;(let ([varname (first data)]
-              ;[value (format "~a" (send (second data) getValue))])
-          ;(send this set-string idx varname 0)
-          ;(send this set-string idx value 1))))
-    ;(public attach resolve reevaluate setVar)))
-
-;(define selectedAttributesView
-  ;(new ListBoxRep [parent w]))
-
-;(define (updateSelectedAttributes rep)
-  ;(let ([v (send rep sendSelected 'getVar)])
-    ;(send selectedAttributesView setVar v)))
-
 (define the-canvas (new draw-canvas% [parent w]))
 (define objects (new ObjectStore [drawingContext (send the-canvas get-dc)]))
 
 (define add-rectangle-button
   (new button% 
-       [label "Add square"]
+       [label "Add Rectangle"]
        [callback (lambda (b e)
                    (send objects newObject "Rectangle" (send new-object-name get-value)
                          (new resizable-bitmap-dc%))
+                   (send objects draw))]
+       [parent w]))
+(define add-list-button
+  (new button% 
+       [label "Add List"]
+       [callback (lambda (b e)
+                   (send objects newObject "List" (send new-object-name get-value)
+                         (new resizable-bitmap-dc%))
+                   (send objects draw))]
+       [parent w]))
+(define cons-num-list-button
+  (new button% 
+       [label "Cons onto List"]
+       [callback (lambda (b e)
+                   (send objects sendSelected 'cons 5)
                    (send objects draw))]
        [parent w]))
 
@@ -179,6 +151,3 @@
        [parent w]))
 
 (send w show "hi")
-;(define mahrect (new rect% [w 20] [h 12]))
-;(display mahrect)
-

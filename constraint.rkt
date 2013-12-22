@@ -104,8 +104,9 @@
                       (is-set? fv))
                  (send o setValue! (cons fv tv) this)]
                 [(is-set? ov)
-                 (send t setValue! (rest ov) this)
-                 (send f setValue! (first ov) this)]))))))
+                 (when (not (empty? ov))
+                   (send t setValue! (rest ov) this)
+                   (send f setValue! (first ov) this))]))))))
 (define Array
   (class Constraint
     (super-new (ports '(index value array)))

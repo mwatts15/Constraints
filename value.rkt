@@ -55,3 +55,11 @@
 
     (public add-number add-range is-subset? is-member?)))
 
+; add a point to a vector
+(define (add/pv p v)
+  (make-object point% (+ (send p get-x) (send v get-x))
+               (+ (send p get-y) (send v get-y))))
+
+(define (sub/pp p1 p2)
+  (make-object point% (- (send p1 get-x) (send p2 get-x))
+               (- (send p1 get-y) (send p2 get-y))))
