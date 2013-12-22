@@ -2,6 +2,7 @@
 (provide (all-defined-out))
 (require racket/draw)
 (require "constraint.rkt")
+(require "connector.rkt")
 
 (define blue-brush (new brush% [color "blue"]))
 (define yellow-brush (new brush% [color "yellow"]))
@@ -10,7 +11,7 @@
 (define black-pen (new pen% [color "black"] [width 2]))
 
 (define Draw
-  (class object%
+  (class* object% (ConnectorObserver)
     (super-new)
     (init drawingContext)
     (define _dc drawingContext)

@@ -1,8 +1,8 @@
 #lang racket
 (require racket/gui/base)
 (require racket/draw)
-(require "variables.rkt")
 (require "value.rkt")
+(require "connector.rkt")
 (require (prefix-in O: "object.rkt"))
 (require trace)
 
@@ -97,19 +97,43 @@
     ; selection and dragging
     (define objectShouldDrag? #f) ; should the selected object be dragged?
     (define dragOffset (make-point 0 0)) ; offset of mouse from object location when dragging
+    (define selectionStartCorner (make-point 0 0))
+    (define selectionEndCorner (make-point 0 0))
+    (define shouldDrawSelectionBox? #f)
+    (define dc (send this get-dc))
+    (define (rectFromPoints p1 p2)
+      (let ([x1 (send p1 get-x)]
+            [x2 (send p2 get-x)]
+            [y1 (send p1 get-y)]
+            [y2 (send p2 get-y)])
+        (values (min x1 x2) (min y1 y2)
+                (max x1 x2) (max y1 y2))))
 
     (define/override (on-subwindow-event receiver event)
       (let ([cursorPoint (make-point (send event get-x) (send event get-y))])
         ; selection
-        (cond [(and (send event button-down?) (send objects setSelectedByLocation cursorPoint))
-               (set! objectShouldDrag? #t)
-               (set! dragOffset (sub/pp (send objects sendSelected 'getPos) cursorPoint))
+        (cond [(send event button-down?)
+               (if (send objects setSelectedByLocation cursorPoint)
+                 (begin (set! objectShouldDrag? #t)
+                        (set! dragOffset (sub/pp (send objects sendSelected 'getPos) cursorPoint)))
+                 (begin (set! selectionStartCorner cursorPoint)
+                        (set! shouldDrawSelectionBox? #t)))
                (send objects draw)]
               [(send event button-up?)
-               (set! objectShouldDrag? #f)]
-              [(and (send event dragging?) objectShouldDrag?)
-               (send objects sendSelected 'setPos (add/pv cursorPoint dragOffset))
-               (send objects draw)])))))
+               (set! objectShouldDrag? #f)
+               (set! shouldDrawSelectionBox? #f)
+               (send objects draw)]
+              [(send event dragging?)
+               (cond [objectShouldDrag?
+                       (send objects sendSelected 'setPos (add/pv cursorPoint dragOffset))
+                       (send objects draw)]
+                     [shouldDrawSelectionBox?
+                       (send objects draw)
+                       (set! selectionEndCorner cursorPoint)
+                       (let-values ([(x1 y1 x2 y2)
+                                     (rectFromPoints selectionStartCorner selectionEndCorner)])
+                         (send dc set-pen "grey50" 2 'short-dash)
+                         (send dc draw-rectangle x1 y1 (- x2 x1) (- y2 y1)))])])))))
 
 (define my-frame% 
   (class frame%

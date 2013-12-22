@@ -4,6 +4,7 @@
 (require (prefix-in C: "constraint.rkt"))
 (require (prefix-in N: "control.rkt"))
 (require (prefix-in R: "representation.rkt"))
+(require "connector.rkt")
 (require racket/gui/base)
 (provide (all-defined-out))
 
@@ -12,7 +13,7 @@
     (init drawingContext)
     (init representation
           control)
-    (define _c (new C:Connector))
+    (define _c (new Connector))
     (define _dc drawingContext)
     (define _con (new control [connector _c]))
 
@@ -49,15 +50,15 @@
   (class Object
     (super-new [representation R:RectangleList]
                [control N:List])
-    (define _car (new C:Connector))
-    (define _cdr (new C:Connector))
+    (define _car (new Connector))
+    (define _cdr (new Connector))
     (define _lconstraint (new C:List))
     (define/override (setup c ctrl rep)
       (let ([l (list)]
-            [head (new C:Connector)]
-            [tail (new C:Connector)]
+            [head (new Connector)]
+            [tail (new Connector)]
             [listConstraint (new C:List)])
-        (C:connect c listConstraint 'list)
-        (C:connect head listConstraint 'head)
-        (C:connect tail listConstraint 'tail)
+        (connect c listConstraint 'list)
+        (connect head listConstraint 'head)
+        (connect tail listConstraint 'tail)
         (send c setValue! l ctrl)))))

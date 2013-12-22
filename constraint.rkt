@@ -1,13 +1,14 @@
 #lang racket
 
 (provide (all-defined-out))
+(require "connector.rkt")
 
 (define unset?
   (curry eq? 'unset))
 (define is-set?
   (negate unset?))
 (define Constraint
-  (class* object% (writable<%>)
+  (class* object% (writable<%> ConnectorObserver)
     (super-new)
     (init (ports '()))
     (init-field [name 'GenericConstraint])
@@ -151,93 +152,6 @@
                  (send s setValue! w)
                  (send r setValue! rv))])))))
 
-(define (exn:contradiction oldval newval connector)
-  (list 'contradiction ': 'setting newval 'from oldval 'on connector))
-
-(define (exn:contradiction? maybe-exn)
-  (if (list? maybe-exn)
-    (eq? 'contradiction (first maybe-exn))
-    false))
-
-(define Connector
-  (class* object% (writable<%>)
-    (super-new)
-    (init [name (gensym)])
-    (define _name name)
-    (define v 'unset)
-    (define informant false)
-    (define constraints '())
-    (define (hasValue?)
-      (if informant true false))
-
-    (define (custom-write out)
-      (display _name out)(display constraints out))
-
-    (define (custom-display out)
-      (send this custom-write out))
-
-    (define (set newval setter)
-      ;(display `(,setter settting ,this to ,newval from ,v))(newline)
-      (cond [(not (send this hasValue?))
-             (set! v newval)
-             (set! informant setter)
-             (for ([x constraints]
-                   #:unless (eq? x setter))
-               (send x resolve))]
-            [((compose not eq?) v newval)
-             (raise (exn:contradiction v newval this))]))
-    (define (informant? c)
-      (eq? c informant))
-
-    (define (getName)
-      _name)
-
-    (define (requestSetValue! newval setter)
-      ;(display `(attempting to switch ,v to ,newval))(newline)
-      (cond [(send this hasValue?)
-             (forget informant)
-             (set newval setter)]
-            [else (set newval setter)]))
-
-    (define (forget retractor)
-      (when (eq? retractor informant)
-           ;(display `(,retractor retracting on ,this))(newline)
-           (set! informant false)
-           (set! v 'unset)
-           (for ([x constraints]
-                 #:unless (eq? x retractor))
-             (send x reevaluate))))
-
-    (define (getValue)
-      v)
-
-    (define (connect new-constraint)
-      ;(display `(connecting ,new-constraint to ,this)) (newline)
-      (and (not (memq new-constraint constraints))
-           (set! constraints (cons new-constraint constraints))))
-
-    (define (getConstraints)
-      constraints)
-
-    (public custom-write custom-display)
-    (public
-      (forget forgetValue!)
-      (set setValue!)
-      requestSetValue!
-      getConstraints
-      hasValue?
-      connect
-      informant?
-      getName
-      getValue)))
-
-(define ConnectorObserver
-  (class object%
-    (define (attach . _) #t)
-    (define (resolve . _) #t)
-    (define (reevaluate . _) #t)
-    (public attach resolve reevaluate)))
-
 ; holds a constant and matches the value of its sole connector.
 ; change the value though the methods setValue! and forgetValue!
 (define Constant
@@ -264,12 +178,6 @@
       (set setValue!)
       getValue)))
 
-(define (connect connector constraint [p null])
-    (send connector
-          connect constraint)
-    (send constraint
-          attach p connector))
-
 (define (connectConstraints c1 port1 c2 port2)
   (define the-connector
     (let ([conn1 (send c1 getPort port1)]
@@ -287,11 +195,6 @@
     #f))
 
 (define (disconnectConstraint c port)
-  (send c disconnect port))
-
-; constraints have connectors
-; constraints constrain the cells they are connected to
-; cells hold values
-; constraints are satisfied by the assignment of values to cells
-; cells can satisfy themselves
-;
+  (when (is-set? (send c getPort port))
+    (send (send c getPort port) disconnect c)
+    (send c disconnect port)))

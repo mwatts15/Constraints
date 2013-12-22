@@ -1,6 +1,6 @@
 #lang racket
 (require "value.rkt")
-(require (only-in "constraint.rkt" Connector))
+(require "connector.rkt")
 (provide (all-defined-out))
 ; queries and actions on rectangles
 (define List
