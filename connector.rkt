@@ -1,12 +1,14 @@
 #lang racket
 
+(require "traversable.rkt")
+
 (provide (all-defined-out))
 (define ConnectorObserver
   (interface ()
     attach resolve reevaluate))
 
 (define Connector
-  (class* object% (writable<%>)
+  (class* object% (writable<%> Traverseable)
     (super-new)
     (init [name (gensym)])
     (define _name name)
@@ -32,6 +34,7 @@
                (send x resolve))]
             [((compose not eq?) v newval)
              (raise (exn:contradiction v newval this))]))
+
     (define (informant? c)
       (eq? c informant))
 
@@ -63,6 +66,9 @@
     (define (disconnect c)
       (set! _observers (set-remove _observers c)))
 
+    (define (neighbors)
+      (getObservers))
+
     (define (getObservers)
       (set->list _observers))
 
@@ -72,6 +78,7 @@
       (_set setValue!)
       requestSetValue!
       getObservers
+      neighbors
       hasValue?
       connect
       disconnect

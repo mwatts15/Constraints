@@ -1,11 +1,12 @@
 #lang racket
 
-(require "constraint.rkt")
+(require "connector.rkt")
+(require "traversable.rkt")
 
 (provide ConsoleRep)
 
 (define ConsoleRep
-  (class object%
+  (class* object% (writable<%> ConnectorObserver Traverseable)
     (super-new)
     (init-field c)
     (connect c this)
@@ -16,4 +17,19 @@
       (error "nope"))
     (define (resolve)
       (and (send c hasValue?) (display `(,(send c getName) = ,(send c getValue))) (newline)))
-    (public resolve reevaluate attach disconnect)))
+
+    (define (custom-write out)
+      (display 'ConsoleRep out))
+
+    (define (custom-display out)
+      (send this custom-write out))
+    (define (getName)
+      "ConsoleRep")
+    (define (connectorNames)
+      '())
+    (define (neighbors)
+      (list c))
+
+    (public custom-write custom-display)
+    (public neighbors)
+    (public connectorNames getName resolve reevaluate attach disconnect)))

@@ -2,17 +2,20 @@
 
 (provide (all-defined-out))
 (require "connector.rkt")
+(require "traversable.rkt")
 
 (define unset?
   (curry eq? 'unset))
+
 (define is-set?
   (negate unset?))
+
 (define Constraint
-  (class* object% (writable<%> ConnectorObserver)
+  (class* object% (writable<%> ConnectorObserver Traverseable)
     (super-new)
     (init (ports '()))
     (init-field [name 'GenericConstraint])
-    (define connectors (make-hash (map (lambda (l) (cons l 'unset))
+    (define _connectors (make-hash (map (lambda (l) (cons l 'unset))
                                        ports)))
     (define (custom-write out)
       (display name out))
@@ -40,11 +43,19 @@
     (define (getPort port-name)
       (hash-ref connectors port-name))
     (define (connectorNames)
-      (dict-keys connectors))
+      (dict-keys _connectors))
+
+    (define (getConnectors)
+      (dict-values _connectors))
+
+    (define (neighbors) (getConnectors))
 
     (public getPort 
             resolve reevaluate 
             connectorNames
+            getConnectors
+            getName
+            neighbors
             disconnect attach)
     ; for writeable<%>
     (public custom-write custom-display)))
