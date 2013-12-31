@@ -1,12 +1,11 @@
 #lang racket
 
 (require "constraint.rkt")
+(require "connector.rkt")
 (require "variables.rkt")
 (require racket/match)
-(require (only-in (file "bool.rkt") Equal And))
 
 (provide (all-defined-out))
-(provide (all-from-out (file "bool.rkt")))
 (define Product
   (class Constraint
     (super-new (ports '(lhs rhs product))(name 'Product))
@@ -101,6 +100,19 @@
                 [(is-set? ov)
                  (send i setValue! (- ov) this)]))))))
 
+(define Even
+  (class Constraint
+    (super-new (ports '(arg)) (name 'Even))
+    (inherit getPort)
+    (define/override (resolve)
+      (let ([i (getPort 'arg)])
+        (let ([iv (send i getValue)])
+          (if (and (is-set? iv) (integer? iv))
+            (unless (even? iv)
+              (send i requestSetValue! (* 2 iv) this))
+            (send i setValue! 2 this)))))))
+
+
 (define (toInfix expr)
   (match expr
     [`(,op ,lhs ,rhs) `(,(toInfix lhs) ,op ,(toInfix rhs))]
@@ -140,19 +152,29 @@
                 [x x])
          [`(,op ,x ...) (cons op (map mathOpt x))]
          [x x]))
-(define (logOpt expr)
-  (match expr
-    [x x]))
 
-(define (f->c formula [parentConstraint #f] [side #f])
+(define Equal
+  (class Constraint
+    (super-new (ports '(lhs rhs))(name 'Equal))
+    (inherit getPort)
+    (define/override (resolve)
+      (let ([lhs (getPort 'lhs)]
+            [rhs (getPort 'rhs)])
+        (let ([lv (send lhs getValue)]
+              [rv (send rhs getValue)])
+          (cond [(is-set? lv)
+                 (send rhs setValue! lv this)]
+                [(is-set? rv)
+                 (send lhs setValue! rv this)]))))))
+
+(define (f->c . formulas)
   (define ops ; indexed by number of operands
     (vector #f
             (hash '- (list Negation 'negation))
             (hash '+ (list Sum 'sum)
                   '- (list Difference 'difference)
                   '/ (list Quotient 'quotient)
-                  '= (list Equal 'out)
-                  'and (list And 'out)
+                  '= (list Equal 'don't-use)
                   '* (list Product 'product))))
   (define (var? expr) 
     (and (symbol? expr) 
@@ -165,16 +187,11 @@
                      [else '()])])
       (remove-duplicates res)))
 
-  (define simplifiedFormula (mathOpt formula))
-
-  (display `(f->c ,formula (simplified ,simplifiedFormula)))(newline)
-  (display (vars formula))(newline)
-
   (define external
     (class Constraint
       [init vstore]
       (define vs vstore)
-      (super-new [ports (dict-keys vstore)])
+      (super-new [ports (dict-keys vstore)] [name 'Formula])
       ; we don't have to do anything here because the connectors will activate 
       ; the correct internal constraints
       (define/override (resolve)
@@ -185,32 +202,35 @@
           (connect c ob innerName)))))
 
   (define vstore (make-hash))
-  (for ([v (vars formula)])
-    (dict-set! vstore v (make-hash)))
 
-  (define (sub f p s)
+  (define (sub f parent parentPort)
     (cond [(list? f)
            (let* ([c-type (first f)]
                   [d (dict-ref (dict-ref ops (sub1 (length f))) c-type)]
                   [c (new (first d))]
                   [output (second d)])
-             (if p 
-               (connectConstraints c output p s)
-               (dict-set! vstore 'result (make-hash (list (cons c output)))))
+             (if parent 
+               (connectConstraints c output parent parentPort)
+               (when (not (eq? '= c-type))
+                 (dict-set! vstore 'result (make-hash (list (cons c output))))))
              (cond [(eq? (length f) 3) ; binary operations
                     (sub (second f) c 'lhs)
                     (sub (third f) c 'rhs)]
                    [(eq? (length f) 2) ; unary operations
                     (sub (second f) c 'arg)]))]
-          [(and (var? f) p)
+          [(and (var? f) parent)
            (let* ([internals (dict-ref vstore f)])
-             (dict-set! internals p s))]
-          [(and (number? f) p)
+             (dict-set! internals parent parentPort))]
+          [(and (number? f) parent)
            ; make a constant and attach it
            (let ([c (new Constant)]
                  [con (new Connector)])
              (connect con c 'out)
              (send c setValue! f)
-             (connect con p s))]))
-  (sub simplifiedFormula parentConstraint side)
+             (connect con parent parentPort))]))
+  (for ([f formulas])
+    (for ([v (vars f)])
+      (dict-set! vstore v (make-hash)))
+    (let ([simplifiedFormula (mathOpt f)])
+      (sub f #f #f)))
   (new external [vstore vstore]))

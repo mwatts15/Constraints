@@ -28,20 +28,24 @@
     (define (resolve)
       (error "abstract"))
 
+    (define (getName)
+      name)
+
     (define (reevaluate)
-      (for ([(k c) connectors])
+      (for ([(k c) _connectors])
         ;(display k)(newline)
         (send c forgetValue! this))
       (send this resolve))
 
     (define (disconnect port)
-      (hash-set! connectors port 'unset))
+      (hash-set! _connectors port 'unset))
 
     (define (attach port connector)
-      (hash-set! connectors port connector))
+      (hash-set! _connectors port connector))
 
     (define (getPort port-name)
-      (hash-ref connectors port-name))
+      (hash-ref _connectors port-name))
+
     (define (connectorNames)
       (dict-keys _connectors))
 
@@ -103,7 +107,7 @@
 
 (define List
   (class Constraint
-    (super-new (ports '(head tail list)))
+    (super-new (ports '(head tail list)) [name 'List])
     (inherit getPort)
     (define/override (resolve)
       (let ([o (getPort 'list)]
@@ -121,7 +125,7 @@
                    (send f setValue! (first ov) this))]))))))
 (define Array
   (class Constraint
-    (super-new (ports '(index value array)))
+    (super-new [ports '(index value array)] [name 'Array])
     (inherit getPort)
     (define/override (resolve)
       (let ([a (getPort 'array)]
@@ -167,7 +171,7 @@
 ; change the value though the methods setValue! and forgetValue!
 (define Constant
   (class Constraint
-    (super-new (ports '(out)))
+    (super-new (ports '(out)) [name 'Constant])
     (inherit getPort)
     (define v 'unset)
 
@@ -209,3 +213,51 @@
   (when (is-set? (send c getPort port))
     (send (send c getPort port) disconnect c)
     (send c disconnect port)))
+
+(define (networkEdges . verts)
+  (define (name-list l)
+    (map (lambda (x) (send x getName)) l))
+  (define (helper _seen _verts _edges)
+    (define (neighbors x) 
+      (with-handlers ([(const #t) (lambda (_) (raise `(,x is not traversable on seen = ,_seen verts = ,_verts edges = ,_edges)))])
+        (send x neighbors)))
+    (define (edges x) (map (lambda (y) (list x y)) (neighbors x)))
+    (define (seen? v) 
+      (member v _seen))
+    (if (empty? _verts)
+      _edges
+      ; take verts
+      ; get their neighbors
+      ; get the union of their neighbors
+      (let* ([neighborVerts (remove-duplicates ((compose (curry apply append)
+                                                         (curry map neighbors))
+                                                _verts))]
+             [newVerts (filter-not seen? neighborVerts)]
+             [neighborEdges (remove-duplicates ((compose (curry apply append)
+                                                         (curry map edges))
+                                                _verts))]
+             [newEdges (remove-duplicates
+                         (append neighborEdges _edges)
+                         (lambda (x y) (or (equal? x y)
+                                           (equal? (reverse x) y))))]
+             [newSeen (remove-duplicates (append _verts _seen))])
+        (helper newSeen newVerts newEdges))))
+        
+  (remove-duplicates (helper '() verts '())))
+
+(define (graphvizOut . verts)
+  (define names (make-hash))
+  (define (getName c)
+    ((compose (lambda (n) (regexp-replace "-" n "_"))
+              (curry format "~a"))
+     (dict-ref! names c (gensym (send c getName)))))
+
+  (printf "graph g {~n")
+  (printf "overlap=false~n")
+  (for ([e (apply networkEdges verts)])
+    (when (is-a? (car e) ConnectorObserver)
+      (printf "~a [shape=box]~n" (getName (car e))))
+    (when (is-a? (cdr e) ConnectorObserver)
+      (printf "~a [shape=box]~n" (getName (cdr e))))
+    (printf "~a--~a~n" (getName (first e)) (getName (second e))))
+  (printf "}~n"))

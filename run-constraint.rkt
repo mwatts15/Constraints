@@ -81,6 +81,6 @@
   (new ConsoleRep [c t])
   (new ConsoleRep [c th])
   (new ConsoleRep [c tt])
-  (send t setValue! '(a b c d e f g) 'user)
+  (send t setValue! '(a b f g) 'user)
   (send h setValue! 'k 'user)
   'done)

@@ -72,24 +72,3 @@
               [(and (is-set? vo)
                     (eq? true v2))
                (send a1 setValue! vo this)])))))
-
-(define Equal
-  (class Constraint
-    (super-new (ports '(lhs rhs out))(name 'Equal))
-    (inherit getPort)
-    (define/override (resolve)
-      (let ([lhs (getPort 'lhs)]
-            [rhs (getPort 'rhs)]
-            [out (getPort 'out)])
-        (let ([lv (send lhs getValue)]
-              [rv (send rhs getValue)]
-              [ov (send out getValue)])
-          (cond [(and (is-set? lv)
-                      (eq? true ov))
-                 (send rhs setValue! lv this)]
-                [(and (is-set? rv)
-                      (eq? true ov))
-                 (send lhs setValue! rv this)]
-                [(and (is-set? rv)
-                      (is-set? lv))
-                 (send out setValue! (eq? rv lv) this)]))))))
