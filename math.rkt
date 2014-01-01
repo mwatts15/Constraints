@@ -107,10 +107,8 @@
     (define/override (resolve)
       (let ([i (getPort 'arg)])
         (let ([iv (send i getValue)])
-          (if (and (is-set? iv) (integer? iv))
-            (unless (even? iv)
-              (send i requestSetValue! (* 2 iv) this))
-            (send i setValue! 2 this)))))))
+          (unless (even? iv)
+            (send i setValue! (* 2 iv) this)))))))
 
 
 (define (toInfix expr)
@@ -166,71 +164,3 @@
                  (send rhs setValue! lv this)]
                 [(is-set? rv)
                  (send lhs setValue! rv this)]))))))
-
-(define (f->c . formulas)
-  (define ops ; indexed by number of operands
-    (vector #f
-            (hash '- (list Negation 'negation))
-            (hash '+ (list Sum 'sum)
-                  '- (list Difference 'difference)
-                  '/ (list Quotient 'quotient)
-                  '= (list Equal 'don't-use)
-                  '* (list Product 'product))))
-  (define (var? expr) 
-    (and (symbol? expr) 
-         (regexp-match #rx"[a-z]+" (symbol->string expr))))
-
-  (define (vars expr)
-    (let ([res (cond [(list? expr) 
-                      (apply append (map vars (rest expr)))]
-                     [(var? expr) (list expr)]
-                     [else '()])])
-      (remove-duplicates res)))
-
-  (define external
-    (class Constraint
-      [init vstore]
-      (define vs vstore)
-      (super-new [ports (dict-keys vstore)] [name 'Formula])
-      ; we don't have to do anything here because the connectors will activate 
-      ; the correct internal constraints
-      (define/override (resolve)
-        #t)
-      (define/override (attach p c)
-        (super attach p c)
-        (for ([(ob innerName) (dict-ref vs p)])
-          (connect c ob innerName)))))
-
-  (define vstore (make-hash))
-
-  (define (sub f parent parentPort)
-    (cond [(list? f)
-           (let* ([c-type (first f)]
-                  [d (dict-ref (dict-ref ops (sub1 (length f))) c-type)]
-                  [c (new (first d))]
-                  [output (second d)])
-             (if parent 
-               (connectConstraints c output parent parentPort)
-               (when (not (eq? '= c-type))
-                 (dict-set! vstore 'result (make-hash (list (cons c output))))))
-             (cond [(eq? (length f) 3) ; binary operations
-                    (sub (second f) c 'lhs)
-                    (sub (third f) c 'rhs)]
-                   [(eq? (length f) 2) ; unary operations
-                    (sub (second f) c 'arg)]))]
-          [(and (var? f) parent)
-           (let* ([internals (dict-ref vstore f)])
-             (dict-set! internals parent parentPort))]
-          [(and (number? f) parent)
-           ; make a constant and attach it
-           (let ([c (new Constant)]
-                 [con (new Connector)])
-             (connect con c 'out)
-             (send c setValue! f)
-             (connect con parent parentPort))]))
-  (for ([f formulas])
-    (for ([v (vars f)])
-      (dict-set! vstore v (make-hash)))
-    (let ([simplifiedFormula (mathOpt f)])
-      (sub f #f #f)))
-  (new external [vstore vstore]))

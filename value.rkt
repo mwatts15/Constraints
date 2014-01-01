@@ -6,7 +6,7 @@
 (define Rectangle 
   (class object%
     (super-new)
-    (field [x 0] [y 0] [w 2] [h 2])))
+    (field [w 2] [h 2])))
 
 (define (make-point x y)
   (make-object point% x y))

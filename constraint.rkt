@@ -3,6 +3,7 @@
 (provide (all-defined-out))
 (require "connector.rkt")
 (require "traversable.rkt")
+(require (prefix-in V: "value.rkt"))
 
 (define unset?
   (curry eq? 'unset))
@@ -46,6 +47,9 @@
     (define (getPort port-name)
       (hash-ref _connectors port-name))
 
+    (define (setPortValue! p v s)
+      (send (hash-ref _connectors p) setValue! v s))
+
     (define (connectorNames)
       (dict-keys _connectors))
 
@@ -55,6 +59,7 @@
     (define (neighbors) (getConnectors))
 
     (public getPort 
+            setPortValue!
             resolve reevaluate 
             connectorNames
             getConnectors
@@ -81,28 +86,6 @@
               (send r setValue! false this))
             (send p setValue! (satisfier pval) this)))))))
 
-(define LeftOf
-  (class Constraint
-    (super-new (ports '(o1 o2 out)))
-    (inherit getPort)
-    (define/override (attach p c)
-      (and (or (eq? p 'o1) (eq? p 'o2))
-           (connect (get-field x c) this `(,p x))
-           (connect (get-field width c) this `(,p width)))
-      (super attach p c))
-
-    (define/override (resolve)
-        (let ([o1x (getPort '(o1 x))]
-              [o1w (getPort '(o1 width))]
-              [o2x (getPort '(o2 x))]
-              [r (getPort 'out)])
-          (and (and (send r hasValue?) (eq? true (send r getValue)))
-               (cond [(and (send o1x hasValue?) (send o1w hasValue?)) 
-                      (send o2x setValue! (+ (send o1x getValue) (send o1w getValue)) this)]
-                     [(and (send o2x hasValue?) (send o1w hasValue?))
-                      (send o1x setValue! (- (send o2x getValue) (send o1w getValue)) this)]))))))
-
-(PredicateConstraint Even even? thunk)
 (PredicateConstraint Odd odd? thunk)
 
 (define List
@@ -150,23 +133,44 @@
                    (send i setValue! (vector-member vv vec) this))]))))))
 (define Square
   (class Constraint
-    (super-new (ports '(side rectangle)))
+    (super-new (ports '(ob side)))
     (inherit getPort)
     (define/override (resolve)
       (let* ([s (getPort 'side)]
-             [r (getPort 'rectangle)]
+             [r (getPort 'ob)]
              [sv (send s getValue)]
              [rv (send r getValue)])
         (cond [(is-set? sv)
+               (unless (is-set? rv)
+                 (set! rv (new V:Rectangle)))
                (set-field! w rv sv)
                (set-field! h rv sv)
-               (send r setValue! rv)]
+               (send r setValue! rv this)]
               [(is-set? rv)
                (let ([w (get-field w rv)])
                  (set-field! h rv w)
-                 (send s setValue! w)
-                 (send r setValue! rv))])))))
-
+                 (send s setValue! w this)
+                 (send r setValue! rv this))])))))
+(define At
+  (class Constraint
+    (super-new [ports '(loc ob)] [name 'At])
+    (inherit getPort)
+    (define/override (resolve)
+      (let* ([l (getPort 'loc)]
+             [o (getPort 'ob)]
+             [lv (send l getValue)]
+             [ov (send o getValue)])
+        (cond [(is-set? lv)
+               (unless (is-set? rv)
+                 (set! rv (new V:Rectangle)))
+               (set-field! w rv sv)
+               (set-field! h rv sv)
+               (send r setValue! rv this)]
+              [(is-set? rv)
+               (let ([w (get-field w rv)])
+                 (set-field! h rv w)
+                 (send s setValue! w this)
+                 (send r setValue! rv this))])
 ; holds a constant and matches the value of its sole connector.
 ; change the value though the methods setValue! and forgetValue!
 (define Constant
