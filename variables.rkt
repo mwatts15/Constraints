@@ -2,7 +2,7 @@
 
 (require "connector.rkt")
 
-(provide (all-defined-out))
+(provide Variable)
 (provide (all-from-out "connector.rkt"))
 
 ; should only be placed on the "outside" of the constraint network

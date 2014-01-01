@@ -1,19 +1,19 @@
 #lang racket
 
-(require "constraint.rkt")
-(require "connector.rkt")
-(require "variables.rkt")
+(require "constraint.rkt"
+         "connector.rkt"
+         "unset.rkt")
 (require racket/match)
 
 (provide (all-defined-out))
 (define Product
   (class Constraint
-    (super-new (ports '(lhs rhs product))(name 'Product))
+    (super-new (ports '(lhs rhs res))(name 'Product))
     (inherit getPort)
     (define/override (resolve)
       (let* ([l (getPort 'lhs)]
              [r (getPort 'rhs)]
-             [p (getPort 'product)]
+             [p (getPort 'res)]
              [lv (send l getValue)]
              [rv (send r getValue)]
              [pv (send p getValue)])
@@ -22,18 +22,20 @@
                (send p setValue! (* lv rv) this)]
               [(and (is-set? lv)
                     (is-set? pv))
-               (send r setValue! (/ pv lv) this)]
+               (unless (eq? lv 0)
+                 (send r setValue! (/ pv lv) this))]
               [(and (is-set? rv)
                     (is-set? pv))
-               (send l setValue! (/ pv rv) this)])))))
+               (unless (eq? rv 0)
+                 (send l setValue! (/ pv rv) this))])))))
 (define Sum
   (class Constraint
-    (super-new (ports '(lhs rhs sum))(name 'Sum))
+    (super-new (ports '(lhs rhs res))(name 'Sum))
     (inherit getPort)
     (define/override (resolve)
       (let ([l (getPort 'lhs)]
             [r (getPort 'rhs)]
-            [s (getPort 'sum)])
+            [s (getPort 'res)])
         (let ([lv (send l getValue)]
               [rv (send r getValue)]
               [sv (send s getValue)])
@@ -48,12 +50,12 @@
                  (send l setValue! (- sv rv) this)]))))))
 (define Difference
   (class Constraint
-    (super-new (ports '(lhs rhs difference))(name 'Diff))
+    (super-new (ports '(lhs rhs res))(name 'Diff))
     (inherit getPort)
     (define/override (resolve)
       (let ([l (getPort 'lhs)]
             [r (getPort 'rhs)]
-            [d (getPort 'difference)])
+            [d (getPort 'res)])
         (let ([lv (send l getValue)]
               [rv (send r getValue)]
               [dv (send d getValue)])
@@ -68,21 +70,25 @@
                  (send l setValue! (+ dv rv) this)]))))))
 (define Quotient
   (class Constraint
-    (super-new (ports '(lhs rhs quotient))(name 'Quot))
+    (super-new (ports '(lhs rhs res))(name 'Quot))
     (inherit getPort)
     (define/override (resolve)
       (let ([l (getPort 'lhs)]
             [r (getPort 'rhs)]
-            [q (getPort 'quotient)])
+            [q (getPort 'res)])
         (let ([lv (send l getValue)]
               [rv (send r getValue)]
               [qv (send q getValue)])
           (cond [(and (is-set? lv)
                       (is-set? rv))
-                 (send q setValue! (/ lv rv) this)]
+                 (if (zero? rv)
+                   (send q setValue! 'undef this)
+                   (send q setValue! (/ lv rv) this))]
                 [(and (is-set? lv)
                       (is-set? qv))
-                 (send r setValue! (/ lv qv) this)]
+                 (if (zero? qv)
+                   (send l setValue! 0 this)
+                   (send r setValue! (/ lv qv) this))]
                 [(and (is-set? rv)
                       (is-set? qv))
                  (send l setValue! (* qv rv) this)]))))))

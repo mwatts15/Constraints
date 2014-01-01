@@ -1,5 +1,6 @@
 #lang racket
-(require "constraint.rkt")
+(require "constraint.rkt"
+         "unset.rkt")
 (provide (all-defined-out))
 ; return boolean values and used in boolean algebras
 

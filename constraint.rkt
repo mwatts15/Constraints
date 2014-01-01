@@ -1,22 +1,17 @@
 #lang racket
 
 (provide (all-defined-out))
-(require "connector.rkt")
-(require "traversable.rkt")
+(require "connector.rkt"
+         "traversable.rkt"
+         "unset.rkt")
 (require (prefix-in V: "value.rkt"))
-
-(define unset?
-  (curry eq? 'unset))
-
-(define is-set?
-  (negate unset?))
 
 (define Constraint
   (class* object% (writable<%> ConnectorObserver Traverseable)
     (super-new)
     (init (ports '()))
     (init-field [name 'GenericConstraint])
-    (define _connectors (make-hash (map (lambda (l) (cons l 'unset))
+    (define _connectors (make-hash (map (lambda (l) (cons l unset))
                                        ports)))
     (define (custom-write out)
       (display name out))
@@ -39,7 +34,7 @@
       (send this resolve))
 
     (define (disconnect port)
-      (hash-set! _connectors port 'unset))
+      (hash-set! _connectors port unset))
 
     (define (attach port connector)
       (hash-set! _connectors port connector))
@@ -151,37 +146,39 @@
                  (set-field! h rv w)
                  (send s setValue! w this)
                  (send r setValue! rv this))])))))
-(define At
-  (class Constraint
-    (super-new [ports '(loc ob)] [name 'At])
-    (inherit getPort)
-    (define/override (resolve)
-      (let* ([l (getPort 'loc)]
-             [o (getPort 'ob)]
-             [lv (send l getValue)]
-             [ov (send o getValue)])
-        (cond [(is-set? lv)
-               (unless (is-set? rv)
-                 (set! rv (new V:Rectangle)))
-               (set-field! w rv sv)
-               (set-field! h rv sv)
-               (send r setValue! rv this)]
-              [(is-set? rv)
-               (let ([w (get-field w rv)])
-                 (set-field! h rv w)
-                 (send s setValue! w this)
-                 (send r setValue! rv this))])
+;(define At
+  ;(class Constraint
+    ;(super-new [ports '(loc ob world)] [name 'At])
+    ;(inherit getPort)
+    ;(define/override (resolve)
+      ;(let* ([l (getPort 'loc)]
+             ;[o (getPort 'ob)]
+             ;[w (getPort 'world)]
+             ;[lv (send l getValue)]
+             ;[ov (send o getValue)]
+             ;[wv (send w getValue)])
+        ;(cond [(is-set? lv)
+               ;(unless (is-set? rv)
+                 ;(set! rv (new V:Rectangle)))
+               ;(set-field! w rv sv)
+               ;(set-field! h rv sv)
+               ;(send r setValue! rv this)]
+              ;[(is-set? rv)
+               ;(let ([w (get-field w rv)])
+                 ;(set-field! h rv w)
+                 ;(send s setValue! w this)
+                 ;(send r setValue! rv this))])))))
 ; holds a constant and matches the value of its sole connector.
 ; change the value though the methods setValue! and forgetValue!
 (define Constant
   (class Constraint
     (super-new (ports '(out)) [name 'Constant])
     (inherit getPort)
-    (define v 'unset)
+    (define v unset)
 
     (define (set newval)
       (send (getPort 'out) forgetValue! this)
-      (and (not (eq? newval 'unset))
+      (and (not (eq? newval unset))
            (begin (set! v newval)
                   (send (getPort 'out) setValue! v this))))
 

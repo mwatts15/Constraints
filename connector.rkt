@@ -1,8 +1,10 @@
 #lang racket
 
-(require "traversable.rkt")
+(require "traversable.rkt"
+         "unset.rkt")
 
 (provide (all-defined-out))
+
 (define ConnectorObserver
   (interface ()
     attach resolve reevaluate))
@@ -12,7 +14,7 @@
     (super-new)
     (init [name (gensym)])
     (define _name name)
-    (define v 'unset)
+    (define v unset)
     (define informant false)
     (define _observers (set))
     (define (hasValue?)
@@ -32,7 +34,7 @@
              (for ([x _observers]
                    #:unless (eq? x setter))
                (send x resolve))]
-            [((compose not eq?) v newval)
+            [((compose not equal?) v newval)
              (raise (exn:contradiction v newval this))]))
 
     (define (informant? c)
@@ -51,7 +53,7 @@
       (when (eq? retractor informant)
            ;(display `(,retractor retracting on ,this))(newline)
            (set! informant false)
-           (set! v 'unset)
+           (set! v unset)
            (for ([x _observers]
                  #:unless (eq? x retractor))
              (send x reevaluate))))

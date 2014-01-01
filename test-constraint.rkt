@@ -1,8 +1,10 @@
 #lang racket
 
-(require "constraint.rkt")
-(require "test-util.rkt")
-(require (prefix-in V: "value.rkt"))
+(require "constraint.rkt"
+         "test-util.rkt"
+         "connector.rkt"
+         "unset.rkt"
+         (prefix-in V: "value.rkt"))
 (require rackunit)
 (require rackunit/text-ui)
 
@@ -11,7 +13,7 @@
   (class object%
     (super-new)
     (init connector)
-    (init [value 'unset])
+    (init [value unset])
     (field [v value] [c connector])
     (send c connect this)
     (define/public (resolve)
@@ -65,29 +67,6 @@
                    (send c1 go)
                    (check-false (send c1 hasValue?))
                    (check-false (send c2 hasValue?)))))
-    (test-suite "PredicateConstraint"
-      (test-case "ValBox with good value"
-                 (let* ([vb (new ValBox)]
-                        [tc (new TestConnector-1 [value (new V:ValueBox)])]
-                        [result (new TestConnector-1 [value true])])
-                   (connect tc vb 'value)
-                   (connect result vb 'result)
-                   (check-not-exn (thunk (send tc go)))))
-      (test-case "ValBox self-satisfies"
-                 (let* ([vb (new ValBox)]
-                        [tc (new TestConnector-1)]
-                        [result (new TestConnector-1 [value true])])
-                   (connect tc vb 'value)
-                   (connect result vb 'result)
-                   (send tc go)
-                   (check-pred (lambda (x) (is-a? x V:ValueBox)) (send tc getValue))))
-      (test-case "ValBox with bad value"
-                 (let* ([vb (new ValBox)]
-                        [tc (new TestConnector-1 [value 2])]
-                        [result (new TestConnector-1 [value true])])
-                   (connect tc vb 'value)
-                   (connect result vb 'result)
-                   (check-exn exn:contradiction? (thunk (send tc go))))))
     (test-suite "Connector"
       (test-case "multiple constraints on one connector"
                  (let* ([c (new Connector)]

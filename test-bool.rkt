@@ -1,10 +1,13 @@
 #lang racket
 
-(require "test-util.rkt")
-(require "bool.rkt")
-(require "constraint.rkt")
+(require "test-util.rkt"
+         "bool.rkt"
+         "constraint.rkt"
+         "connector.rkt"
+         "permute.rkt"
+         "unset.rkt")
 
-(define argument-options (list true false 'unset))
+(define argument-options (list true false unset))
 (define setting-orders
   '((3 1 2) (1 2 3) (1 3 2) (3 2 1) (2 1 3) (2 3 1)))
 
@@ -54,9 +57,9 @@
                     (lambda (f) (f)))
                   (thunk (for ([i settingOrder])
                     (case i
-                      [(1) (send v1 setValue! arg1Val)]
-                      [(2) (send v2 setValue! arg2Val)]
-                      [(3) (send o setValue! outVal)])))))))
+                      [(1) (send v1 setValue! arg1Val 'tester)]
+                      [(2) (send v2 setValue! arg2Val 'tester)]
+                      [(3) (send o setValue! outVal 'tester)])))))))
   (for ([a1 argument-options])
     (for ([a2 argument-options])
       (for ([o argument-options])
