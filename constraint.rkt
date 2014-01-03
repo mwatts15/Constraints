@@ -136,38 +136,39 @@
              [sv (send s getValue)]
              [rv (send r getValue)])
         (cond [(is-set? sv)
-               (unless (is-set? rv)
-                 (set! rv (new V:Rectangle)))
-               (set-field! w rv sv)
-               (set-field! h rv sv)
-               (send r setValue! rv this)]
+               (let ([rect (new V:Rectangle)])
+                 (set-field! w rect sv)
+                 (set-field! h rect sv)
+                 (send r setValue! rect this))]
               [(is-set? rv)
-               (let ([w (get-field w rv)])
-                 (set-field! h rv w)
+               (let* ([rvWidth (get-field w rv)]
+                      [rect (new V:Rectangle)])
+                 (set-field! h rect rvWidth)
+                 (set-field! w rect rvWidth)
                  (send s setValue! w this)
-                 (send r setValue! rv this))])))))
-;(define At
-  ;(class Constraint
-    ;(super-new [ports '(loc ob world)] [name 'At])
-    ;(inherit getPort)
-    ;(define/override (resolve)
-      ;(let* ([l (getPort 'loc)]
-             ;[o (getPort 'ob)]
-             ;[w (getPort 'world)]
-             ;[lv (send l getValue)]
-             ;[ov (send o getValue)]
-             ;[wv (send w getValue)])
-        ;(cond [(is-set? lv)
-               ;(unless (is-set? rv)
-                 ;(set! rv (new V:Rectangle)))
-               ;(set-field! w rv sv)
-               ;(set-field! h rv sv)
-               ;(send r setValue! rv this)]
-              ;[(is-set? rv)
-               ;(let ([w (get-field w rv)])
-                 ;(set-field! h rv w)
-                 ;(send s setValue! w this)
-                 ;(send r setValue! rv this))])))))
+                 (send r setValue! rect this))])))))
+(define At
+  (class Constraint
+    (super-new [ports '(loc ob world)] [name 'At])
+    (inherit getPort)
+    (define/override (resolve)
+      (let* ([l (getPort 'loc)]
+             [o (getPort 'ob)]
+             [w (getPort 'world)]
+             [lv (send l getValue)]
+             [ov (send o getValue)]
+             [wv (send w getValue)])
+        (cond [(is-set? lv)
+               (is-set? wv)
+               (send o setValue! (send wv getObjectsAt lv) this)]
+              [(is-set? lv)
+               (is-set? ov)
+               (let ([newWorld (new V:World [oldWorld wv])])
+                 (send newWorld placeObject ov lv)
+                 (send w setValue! newWorld))]
+              [(is-set? wv)
+               (is-set? ov)
+               (send l setValue! (send wv getLocationOf ov) this)])))))
 ; holds a constant and matches the value of its sole connector.
 ; change the value though the methods setValue! and forgetValue!
 (define Constant

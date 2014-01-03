@@ -40,6 +40,7 @@
            'square Square
            'even Even
            'list List
+           'at At
            ops))
 
   (define external
@@ -75,12 +76,14 @@
 ; ex: a constraint that the array, a, has an even element at 2
 (define n1 '((even (arg v))
              (array (array a) (index i) (value v))))
+
 (define k '((square (ob s) (side l))
-            (at (loc p) (ob s))
+            (at (loc p) (ob s) (world w))
             (point (pt p) (x x) (y y))
             (+ (lhs l) (rhs x) (sum qx))
             (point (pt q) (x qx) (y qy))
-            (at (loc q) (ob r))))
+            (at (loc q) (ob r) (world w))))
+
 (let* ([c (f->c k)])
   (for ([v (send c getConnectors)])
     (new ConsoleRep [c v]))
