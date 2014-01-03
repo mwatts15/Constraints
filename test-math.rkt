@@ -8,8 +8,8 @@
          "math.rkt")
 
 (define testValues
-  (for*/list ([i (in-range -50 50)]
-              [j (in-range -50 50)])
+  (for*/list ([i (in-range -10 10)]
+              [j (in-range -10 10)])
     (cons i j)))
 
 (define (testMathResolveSuccess constraint name op)
@@ -23,7 +23,7 @@
         (connect v1 c 'lhs)
         (connect v2 c 'rhs)
         (for ([(a b) (in-dict testValues)])
-          (let ([res (if (and (eq? op /) 0) 
+          (let ([res (if (and (eq? op /) (zero? b))
                        unset 
                        (op a b))])
             (test-not-exn (format "~a ~a" a b)
@@ -32,10 +32,22 @@
                                      (,o . ,res)))))))))))
 
 (define tests
-  (map testMathResolveSuccess
-       (list Product Quotient Sum Difference)
-       (list "Product" "Quotient" "Sum" "Difference")
-       (list * / + -)))
+  (append 
+    (list (test-suite "Even"
+                      (test-case "successs"
+                                 (let ([c (new Even)]
+                                       [v (new TestConnector-1)])
+                                   (connect v c 'arg)
+                                   (check-not-exn (thunk (send v setValue! 2 'tester)))))
+                      (test-case "failure"
+                                 (let ([c (new Even)]
+                                       [v (new TestConnector-1)])
+                                   (connect v c 'arg)
+                                   (check-exn exn:contradiction? (thunk (send v setValue! 3 'tester)))))))
+    (map testMathResolveSuccess
+         (list Product Quotient Sum Difference)
+         (list "Product" "Quotient" "Sum" "Difference")
+         (list * / + -))))
 
 
 (for ([t tests])
