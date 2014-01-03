@@ -145,7 +145,7 @@
                       [rect (new V:Rectangle)])
                  (set-field! h rect rvWidth)
                  (set-field! w rect rvWidth)
-                 (send s setValue! w this)
+                 (send s setValue! rvWidth this)
                  (send r setValue! rect this))])))))
 (define At
   (class Constraint

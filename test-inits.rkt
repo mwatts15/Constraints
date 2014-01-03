@@ -15,11 +15,11 @@
   (class A
     (super-new)
     (let ([x (send this get-x)])
-      (display x))))
+      (eq? x 0))))
 (define C
   (class B
     (super-new)
     (send this add-x 2)))
 
-(send (new C) show-x)
+(eq? (send (new C) get-x) 2)
 
