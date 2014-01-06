@@ -34,10 +34,10 @@
       (send this resolve))
 
     (define (disconnect port)
-      (hash-set! _connectors port unset))
+      (hash-update! _connectors port (const unset)))
 
     (define (attach port connector)
-      (hash-set! _connectors port connector))
+      (hash-update! _connectors port (const connector)))
 
     (define (getPort port-name)
       (hash-ref _connectors port-name))

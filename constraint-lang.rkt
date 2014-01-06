@@ -6,43 +6,8 @@
 (require "math.rkt")
 ; the basic format is a list of constraints, which can be thought of as
 ; a conjunction
-;(define LeftOf
-  ;(class Constraint
-    ;(super-new (ports '(o1 o2 out)))
-    ;(inherit getPort)
-    ;(define/override (attach p c)
-      ;(and (or (eq? p 'o1) (eq? p 'o2))
-           ;(connect (get-field x c) this `(,p x))
-           ;(connect (get-field width c) this `(,p width)))
-      ;(super attach p c))
 
-    ;(define/override (resolve)
-        ;(let ([o1x (getPort '(o1 x))]
-              ;[o1w (getPort '(o1 width))]
-              ;[o2x (getPort '(o2 x))]
-              ;[r (getPort 'out)])
-          ;(and (and (send r hasValue?) (eq? true (send r getValue)))
-               ;(cond [(and (send o1x hasValue?) (send o1w hasValue?)) 
-                      ;(send o2x setValue! (+ (send o1x getValue) (send o1w getValue)) this)]
-                     ;[(and (send o2x hasValue?) (send o1w hasValue?))
-                      ;(send o1x setValue! (- (send o2x getValue) (send o1w getValue)) this)]))))))
-
-(define (f->c formulas [ops '()])
-  (define _ops ; indexed by number of operands
-    (apply hash 
-           '+ Sum
-           'neg Negation
-           '- Difference
-           '/ Quotient
-           '= Equal
-           '* Product
-           'array Array
-           'square Square
-           'even Even
-           'list List
-           'at At
-           ops))
-
+(define (f->c formulas)
   (define external
     (class Constraint
       [init vstore]
@@ -53,21 +18,39 @@
 
   (define vstore (make-hash))
   (define (getVar v)
-    (dict-ref! vstore v (lambda () (new Connector [name v]))))
+    (dict-ref! vstore v (lambda ()
+                          (new Connector [name v]))))
+  (define _ops ; indexed by number of operands
+    (hash '+ Sum
+          'neg Negation
+          '- Difference
+          '/ Quotient
+          '= Equal
+          '* Product
+          'array Array
+          'square Square
+          'even Even
+          'list List
+          'point Point
+          'at At))
 
   (for ([f formulas])
-    (let ([c (new (dict-ref _ops (first f)))])
+    (let* ([c (new (dict-ref _ops (first f)))]
+           [connectors (send c connectorNames)])
+      (for ([v (map first (rest f))])
+        (unless (member v connectors)
+          (error (format "not a port for ~a: ~a" c v))))
       (for ([arg (rest f)])
         (let ([connector (getVar (second arg))]
               [port (first arg)])
           (connect connector c port)))))
   (new external [vstore vstore]))
 
-(define e '((+ (lhs a) (rhs b) (sum s1)) 
-            (+ (lhs s1) (rhs c) (sum s2)) 
-            (+ (lhs s2) (rhs d) (sum s3))
-            (+ (lhs k) (rhs q) (sum z))
-            (/ (lhs p) (rhs q) (quotient quot))))
+(define e '((+ (lhs a) (rhs b) (res s1)) 
+            (+ (lhs s1) (rhs c) (res s2)) 
+            (+ (lhs s2) (rhs d) (res s3))
+            (+ (lhs k) (rhs q) (res z))
+            (/ (lhs p) (rhs q) (res quot))))
 ; simple syntax. give the name of the constraint (in general, the name of the 
 ; constraint class name but starting with a lowercase letter) followed by a list 
 ; of lists with the first element being the name of the port to attach to and
@@ -78,20 +61,28 @@
              (array (array a) (index i) (value v))))
 
 (define k '((square (ob s) (side l))
+            (square (ob r) (side k))
             (at (loc p) (ob s) (world w))
             (point (pt p) (x x) (y y))
-            (+ (lhs l) (rhs x) (sum qx))
-            (point (pt q) (x qx) (y qy))
+            (+ (lhs l) (rhs x) (res qx))
+            (point (pt q) (x qx) (y y))
             (at (loc q) (ob r) (world w))))
-
-(let* ([c (f->c k)])
-  (for ([v (send c getConnectors)])
-    (new ConsoleRep [c v]))
-  (send c setPortValue! 'l 21 'user))
-(let* ([c (f->c e)])
-  (for ([v (send c getConnectors)])
-    (new ConsoleRep [c v]))
-  (with-method ([s (c setPortValue!)])
-    (s 'k 1 'user)
-    (s 'quot 7/4 'user)
-    (s 'z 5 'user)))
+(define (maine)
+  (let* ([c (f->c k)])
+    (for ([v (send c getConnectors)])
+      (new ConsoleRep [c v]))
+    (with-method ([s (c setPortValue!)])
+      (s 'l 21 'user)
+      (s 'k 25 'user)
+      (s 'x 10 'user)
+      (s 'y 10 'user))))
+  
+  ;(let* ([c (f->c e)])
+    ;(for ([v (send c getConnectors)])
+      ;(new ConsoleRep [c v]))
+    ;(with-method ([s (c setPortValue!)])
+      ;(s 'k 1 'user)
+      ;(s 'quot 7/4 'user)
+      ;(s 'z 5 'user))))
+(maine)
+(provide (all-defined-out))

@@ -74,7 +74,7 @@
                    (send i setValue! (vector-member vv vec) this))]))))))
 (define Square
   (class Constraint
-    (super-new (ports '(ob side)))
+    (super-new [ports '(ob side)] [name 'Square])
     (inherit getPort)
     (define/override (resolve)
       (let* ([s (getPort 'side)]
@@ -105,15 +105,19 @@
              [ov (send o getValue)]
              [wv (send w getValue)])
         (cond [(and (is-set? lv)
-                    (is-set? wv))
+                    (is-set? wv)
+                    (is-set? (send wv getObjectsAt lv)))
                (send o setValue! (send wv getObjectsAt lv) this)]
               [(and (is-set? lv)
                     (is-set? ov))
-               (let ([newWorld (new V:World [oldWorld wv])])
+               (let ([newWorld (if (unset? wv)
+                                 (new V:World)
+                                 (new V:World [oldWorld wv]))])
                  (send newWorld placeObject ov lv)
-                 (send w setValue! newWorld))]
+                 (send w setValue! newWorld this))]
               [(and (is-set? wv)
-                    (is-set? ov))
+                    (is-set? ov)
+                    (is-set? (send wv getLocationOf ov)))
                (send l setValue! (send wv getLocationOf ov) this)])))))
 (define Point
   (class Constraint
@@ -132,7 +136,7 @@
               [(and (is-set? xv)
                     (is-set? yv))
                (let ([newPoint (V:make-point xv yv)])
-                 (send p setValue! newPoint))])))))
+                 (send p setValue! newPoint this))])))))
 
 ; holds a constant and matches the value of its sole connector.
 ; change the value though the methods setValue! and forgetValue!

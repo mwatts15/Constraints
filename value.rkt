@@ -1,7 +1,6 @@
 #lang racket
 
-(require (only-in racket/draw point%))
-(require errortrace)
+(require "unset.rkt")
 (provide (all-defined-out))
 
 (define Value (interface () 
@@ -18,7 +17,12 @@
 
 (define Point 
   (class* object% (Value)
-    (field [x 0] [y 0])
+    (super-new)
+    (init-field [x 0] [y 0])
+    (define/public (get-x)
+      x)
+    (define/public (get-y)
+      y)
     (define/public (isConsistentWith? other)
       (and (eq? (get-field x other) x)
            (eq? (get-field y other) y)))))
@@ -74,6 +78,7 @@
   (let ()
     (define-member-name get-o->l (generate-member-key))
     (define-member-name get-l->o (generate-member-key))
+    (define-member-name get-consistencyWidget (generate-member-key))
 
     (define emptyWorld
       (new (class object%
@@ -105,8 +110,11 @@
           (begin (set! _o->l (dict-set _o->l o l))
                  (set! _l->o (dict-update _l->o l (lambda (x) (cons o x)) '())))))
 
+      (define (getLocationOf o)
+        (dict-ref _o->l o unset))
+
       (define (getObjectsAt l)
-        (dict-ref _l->o l '()))
+        (dict-ref _l->o l unset))
 
       (define (removeObjectsAt l)
         (let ([objects (dict-ref _l->o l)])
@@ -133,6 +141,7 @@
               get-consistencyWidget)
       (public getObjectsAt
               isConsistentWith?
+              getLocationOf
               removeObjectsAt
               moveObject
               placeObject))))

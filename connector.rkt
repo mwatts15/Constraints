@@ -1,6 +1,7 @@
 #lang racket
 
 (require "traversable.rkt"
+         "value.rkt"
          "unset.rkt")
 
 (provide (all-defined-out))
@@ -34,7 +35,7 @@
              (for ([x _observers]
                    #:unless (eq? x setter))
                (send x resolve))]
-            [((compose not equal?) v newval)
+            [((compose not consistent?) v newval)
              (raise (exn:contradiction v newval this))]))
 
     (define (informant? c)
@@ -93,6 +94,12 @@
           connect observer)
     (send observer
           attach p connector))
+
+; returns true if a is consistent with b
+(define (consistent? a b) 
+  (or (equal? a b)
+      (and (is-a? a Value) (send a isConsistentWith? b))
+      (and (is-a? b Value) (send b isConsistentWith? a))))
 
 (define (exn:contradiction oldval newval connector)
   (list 'contradiction ': 'setting newval 'from oldval 'on connector))
