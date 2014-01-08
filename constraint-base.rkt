@@ -97,9 +97,6 @@
       (member v _seen))
     (if (empty? _verts)
       _edges
-      ; take verts
-      ; get their neighbors
-      ; get the union of their neighbors
       (let* ([neighborVerts (remove-duplicates ((compose (curry apply append)
                                                          (curry map neighbors))
                                                 _verts))]
@@ -115,5 +112,3 @@
         (helper newSeen newVerts newEdges))))
         
   (remove-duplicates (helper '() verts '())))
-
-

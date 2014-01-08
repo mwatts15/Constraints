@@ -2,16 +2,12 @@
 
 (require (only-in "constraint-base.rkt" Constraint)
          "unset.rkt"
-         "constraint-lang.rkt"
-         "math.rkt"
          (prefix-in V: "value.rkt"))
-
 (provide List
          Array
+         Square
          At
-         Constant
          Point
-         LeftOf
          Square)
 
 (define-syntax-rule (PredicateConstraint name pred? satisfier)
@@ -110,8 +106,8 @@
              [wv (send w getValue)])
         (cond [(and (is-set? lv)
                     (is-set? wv)
-                    (equal? 1 (length (send wv getObjectsAt lv))))
-               (send o setValue! (first (send wv getObjectsAt lv)) this)]
+                    (is-set? (send wv getObjectsAt lv)))
+               (send o setValue! (send wv getObjectsAt lv) this)]
               [(and (is-set? lv)
                     (is-set? ov))
                (let ([newWorld (if (unset? wv)
@@ -167,18 +163,3 @@
     (public
       (set setValue!)
       getValue)))
-
-(define LeftOf (f->c
-                 '((square (ob s) (side l))
-                   (square (ob r) (side k))
-                   (at (loc p) (ob s) (world w))
-                   (point (pt p) (x x) (y y))
-                   (+ (lhs l) (rhs x) (res qx))
-                   (point (pt q) (x qx) (y y))
-                   (at (loc q) (ob r) (world w)))
-                 `((square . ,Square)
-                   (at . ,At)
-                   (+ . ,Sum)
-                   (point . ,Point))
-                 #:name 'LeftOf))
-

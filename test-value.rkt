@@ -1,7 +1,7 @@
 #lang racket
 
-(require "value.rkt")
-(require "test-util.rkt")
+(require "value.rkt"
+         "test-util.rkt")
 
 (define tests
   (list

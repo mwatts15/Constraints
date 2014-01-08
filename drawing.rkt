@@ -78,9 +78,9 @@
   (send objects sendSelected 'getConnector 'list)
   (unless (empty? l)
     (send objects sendSelected 'cons (f (first l)))))
+
 (define (m f l)
   (if (empty? l)
     '()
     (cons (f (first l)) (m f (rest l)))))
 (m (curry * 2) '(1 2 3 4 5))
-;(send w show "hi")

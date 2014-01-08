@@ -114,7 +114,7 @@
         (dict-ref _o->l o unset))
 
       (define (getObjectsAt l)
-        (dict-ref _l->o l unset))
+        (dict-ref _l->o l '()))
 
       (define (removeObjectsAt l)
         (let ([objects (dict-ref _l->o l)])

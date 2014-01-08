@@ -1,7 +1,6 @@
 #lang racket
 
 (require "test-util.rkt"
-         "constraint.rkt"
          "unset.rkt"
          "permute.rkt"
          "connector.rkt"
