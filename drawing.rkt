@@ -33,15 +33,11 @@
 ; not been, then the source will pass the event on to
 ; another interaction.
 (define Interaction (interface () handle))
-    
-(define my-frame% 
-  (class frame%
-    (super-new)))
 
-(define w (new my-frame% [label "Silly window"]))
+(define w (new frame% [label "Silly window"]))
 
 (define the-canvas (new draw-canvas% [parent w]))
-(define objects (new ObjectStore [drawingContext (send the-canvas get-dc)]))
+(define objects (new ObjectStore))
 
 (define add-rectangle-button
   (new button% 

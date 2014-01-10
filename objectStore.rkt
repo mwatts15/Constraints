@@ -3,6 +3,7 @@
 (require (prefix-in O: "object.rkt"))
 (provide (all-defined-out))
 
+; stores Objects and data that should be associated with them
 (define ObjectStore
   (class object% 
     (super-new)
@@ -10,9 +11,7 @@
     (define _types (make-hash `(("Rectangle" . ,O:Rectangle)
                                 ("List" . ,O:List))))
     (define _objects (make-hash))
-    (init drawingContext)
     (init [selectionCallback void])
-    (define _dc drawingContext)
 
     ; The representation doesn't have ownership of the variables.
     ; The variable store keeps them and makes the name
@@ -20,32 +19,11 @@
       (set! _selected objectID)
       (onSelectionChange this))
 
-    (define (getObjectByLocation location)
-      (let ([candidateSelections 
-              (filter
-                (lambda (o) 
-                  (send (dict-ref _objects o) -> 'inside? location))
-                (dict-keys _objects))])
-        (if (empty? candidateSelections)
-          #f
-          (first candidateSelections))))
-
-    (define (setSelectedByLocation location)
-      (let ([candidateSelections 
-              (filter
-                (lambda (o) 
-                  (send (dict-ref _objects o) -> 'inside? location))
-                (dict-keys _objects))])
-        (if (empty? candidateSelections)
-          #f
-          (begin 
-            (setSelected (first candidateSelections))
-            #t))))
-
     (define onSelectionChange selectionCallback)
 
     (define (sendSelected the-method . &args)
       (send/apply (dict-ref _objects _selected) -> the-method &args))
+
     (define (selected? objectName)
       (eq? objectName _selected))
 
@@ -66,5 +44,5 @@
       (for ([(name o) _objects])
         (f name o)))
 
-    (public foreach newObject getObjectByLocation setSelectedByLocation setSelected sendSelected)))
+    (public foreach newObject setSelected sendSelected)))
 
