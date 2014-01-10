@@ -1,0 +1,8 @@
+(= formula
+   (+ (lhs a) (rhs b) (res s1)) 
+   (+ (lhs s1) (rhs c) (res s2)) 
+   (+ (lhs s2) (rhs d) (res s3))
+   (+ (lhs k) (rhs q) (res z))
+   (/ (lhs p) (rhs q) (res quot)))
+
+(formula (p 2) (q 5))
