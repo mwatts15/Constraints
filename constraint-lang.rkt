@@ -1,37 +1,46 @@
 #lang racket
 
 (require "constraint-base.rkt"
-         "math-base.rkt"
+         racket/trace
          "connector.rkt")
 (provide f->c)
 ; the basic format is a list of constraints, which can be thought of as
 ; a conjunction
 (define (f->c formulas userOps #:name [constraintName 'UserConstraint] )
 
-  (define (external vars)
-    (class Constraint
-      (super-new [ports (dict-keys vars)] [name constraintName])
-      (define/override (resolve) (void))
-      (for ([(k v) vars])
-        (send this attach k v))))
-
   (define vstore (make-hash))
 
   (define (getVar v)
     (dict-ref! vstore v (lambda ()
                           (new Connector [name v]))))
-  (define _ops userOps)
-
-  (for ([f formulas])
-    (let* ([c (new (dict-ref _ops (first f)))]
-           [connectors (send c connectorNames)])
-
-      (for ([v (map first (rest f))])
+  (define (checkBindings constraint bindings)
+    (let ([names (map first bindings)]
+          [connectors (send constraint connectorNames)])
+      (for ([v names])
         (unless (member v connectors)
-          (error (format "not a port for ~a: ~a" c v))))
+          (error (format "not a port for ~a: ~a" constraint v))))))
 
-      (for ([arg (rest f)])
-        (let ([connector (getVar (second arg))]
-              [port (first arg)])
-          (connect connector c port)))))
+  (define (external vstore)
+    (class Constraint
+      (super-new [ports (dict-keys vstore)] [name constraintName])
+      (define/override (resolve) (void))
+      (for ([(k v) vstore])
+        (send this attach k v))))
+
+  (if (eq? (caar formulas) '=)
+    (let* ([f (first formulas)]
+           [r (rest formulas)]
+           [name (cadr f)]
+           [form (cddr f)])
+      (f->c r (hash-set userOps 
+                        name (f->c form userOps #:name name))
+            #:name constraintName))
+    (for ([f formulas])
+      (match-let* ([(cons cName bindings) f] 
+                   [c (new (dict-ref userOps cName))])
+        (checkBindings c bindings)
+        (for ([b bindings])
+          (let ([connector (getVar (second b))]
+                [port (first b)])
+            (connect connector c port))))))
   (external vstore))
