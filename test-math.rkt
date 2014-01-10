@@ -4,7 +4,7 @@
          "unset.rkt"
          "permute.rkt"
          "connector.rkt"
-         "math.rkt")
+         "math-types.rkt")
 
 (define testValues
   (for*/list ([i (in-range -10 10)]

@@ -3,7 +3,7 @@
 (require (only-in "constraint-base.rkt" Constraint)
          "unset.rkt"
          "constraint-lang.rkt"
-         "math.rkt"
+         "math-types.rkt"
          (prefix-in V: "value.rkt"))
 
 (provide List
