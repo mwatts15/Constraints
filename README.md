@@ -6,13 +6,13 @@ Constraint programming. Based on the propagation of constraints described in [SI
 See "cml.rkt" and "constraint-lang.rkt" for the file-reader and evaluator.
 A few basic constraints are included.
 
+Run racket cml.rkt run-lang for an example
+
 Example Code (not fully implemented!!):
 
-    (* (rhs x) (lhs x) (res x^2))
+    (* (rhs 2) (lhs 2) (res x^2))
     (* (rhs y) (lhs y) (res y^2))
-    (+ (rhs x^2) (lhs y^2) (res r))
-    (const 2 (toSet x))
-    (const 8 (toSet r))
+    (+ (rhs x^2) (lhs y^2) (res 8))
 
 Produces:
 
