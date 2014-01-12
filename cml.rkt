@@ -14,6 +14,7 @@
         '/ Quotient
         '- Difference
         'even Even
+        'array Array
         '= Equal))
 
 (define (read/f->c in)
