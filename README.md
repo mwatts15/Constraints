@@ -10,7 +10,7 @@ Run `racket cml.rkt run-lang` for an example
 
 Examples (not implemented!!):
 
-1. 
+Example 1:
 
     (array (index 2) (value v) (array #(a 2 3 a 5)))
     (array (index k) (value 'a) (array #(a 2 3 a 5)))
@@ -19,7 +19,7 @@ Produces:
     (v = 3)
     (k in (set 0 3))
 
-1.
+Example 2:
  
     (* (rhs 2) (lhs 2) (res x^2))
     (* (rhs y) (lhs y) (res y^2))
