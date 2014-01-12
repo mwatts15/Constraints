@@ -6,7 +6,7 @@ Constraint programming. Based on the propagation of constraints described in [SI
 See "cml.rkt" and "constraint-lang.rkt" for the file-reader and evaluator.
 A few basic constraints are included.
 
-Run racket cml.rkt run-lang for an example
+Run `racket cml.rkt run-lang` for an example
 
 Example Code (not fully implemented!!):
 
