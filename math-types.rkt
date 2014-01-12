@@ -18,7 +18,7 @@
   (class Constraint
     (super-new (ports '(lhs rhs res))(name 'Product))
     (inherit getPort)
-    (define/override (resolve)
+    (define/augment (resolve)
       (let* ([l (getPort 'lhs)]
              [r (getPort 'rhs)]
              [p (getPort 'res)]
@@ -43,7 +43,7 @@
   (class Constraint
     (super-new (ports '(lhs rhs res))(name 'Sum))
     (inherit getPort)
-    (define/override (resolve)
+    (define/augment (resolve)
       (let ([l (getPort 'lhs)]
             [r (getPort 'rhs)]
             [s (getPort 'res)])
@@ -63,7 +63,7 @@
   (class Constraint
     (super-new (ports '(arg negation))(name 'Neg))
     (inherit getPort)
-    (define/override (resolve)
+    (define/augment (resolve)
       (let ([i (getPort 'arg)]
             [o (getPort 'negation)])
         (let ([iv (send i getValue)]
@@ -77,11 +77,12 @@
   (class Constraint
     (super-new (ports '(arg)) (name 'Even))
     (inherit getPort)
-    (define/override (resolve)
+    (define/augment (resolve)
       (let ([i (getPort 'arg)])
         (let ([iv (send i getValue)])
-          (unless (even? iv)
-            (send i setValue! (* 2 iv) this)))))))
+          (when (integer? iv)
+            (unless (even? iv)
+              (send i setValue! (* 2 iv) this))))))))
 
 (define (toInfix expr)
   (match expr
@@ -127,7 +128,7 @@
   (class Constraint
     (super-new (ports '(lhs rhs))(name 'Equal))
     (inherit getPort)
-    (define/override (resolve)
+    (define/augment (resolve)
       (let ([lhs (getPort 'lhs)]
             [rhs (getPort 'rhs)])
         (let ([lv (send lhs getValue)]
@@ -140,10 +141,11 @@
 (define Difference
   (f->c 
     '((+ (res lhs) (lhs rhs) (rhs res)))
-    `((+ . ,Sum))))
+    `((+ . ,Sum))
+    #:name 'Difference))
 
 (define Quotient
   (f->c 
     '((* (res lhs) (lhs rhs) (rhs res)))
-    `((* . ,Product))))
-
+    `((* . ,Product))
+    #:name 'Quotient))

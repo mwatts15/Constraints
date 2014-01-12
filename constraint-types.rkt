@@ -9,7 +9,6 @@
 (provide List
          Array
          At
-         Constant
          Point
          LeftOf
          Square)
@@ -20,7 +19,7 @@
       (super-new (ports '(value result)))
       (inherit getPort)
 
-      (define/override (resolve)
+      (define/augment (resolve)
         (let* ([r (getPort 'result)]
                [p (getPort 'value)]
                [rval (send r getValue)]
@@ -37,7 +36,7 @@
   (class Constraint
     (super-new (ports '(head tail list)) [name 'List])
     (inherit getPort)
-    (define/override (resolve)
+    (define/augment (resolve)
       (let ([o (getPort 'list)]
             [t (getPort 'tail)]
             [f (getPort 'head)])
@@ -55,7 +54,7 @@
   (class Constraint
     (super-new [ports '(index value array)] [name 'Array])
     (inherit getPort)
-    (define/override (resolve)
+    (define/augment (resolve)
       (let ([a (getPort 'array)]
             [i (getPort 'index)]
             [v (getPort 'value)])
@@ -80,7 +79,7 @@
   (class Constraint
     (super-new [ports '(ob side)] [name 'Square])
     (inherit getPort)
-    (define/override (resolve)
+    (define/augment (resolve)
       (let* ([s (getPort 'side)]
              [r (getPort 'ob)]
              [sv (send s getValue)]
@@ -101,7 +100,7 @@
   (class Constraint
     (super-new [ports '(loc ob world)] [name 'At])
     (inherit getPort)
-    (define/override (resolve)
+    (define/augment (resolve)
       (let* ([l (getPort 'loc)]
              [o (getPort 'ob)]
              [w (getPort 'world)]
@@ -127,7 +126,7 @@
   (class Constraint
     (super-new [ports '(pt x y)] [name 'Point])
     (inherit getPort)
-    (define/override (resolve)
+    (define/augment (resolve)
       (let* ([p (getPort 'pt)]
              [y (getPort 'y)]
              [x (getPort 'x)]
@@ -141,32 +140,6 @@
                     (is-set? yv))
                (let ([newPoint (V:make-point xv yv)])
                  (send p setValue! newPoint this))])))))
-
-; holds a constant and matches the value of its sole connector.
-; change the value though the methods setValue! and forgetValue!
-(define Constant
-  (class Constraint
-    (super-new (ports '(out)) [name 'Constant])
-    (inherit getPort)
-    (define v unset)
-
-    (define (set newval)
-      (send (getPort 'out) forgetValue! this)
-      (and (not (eq? newval unset))
-           (begin (set! v newval)
-                  (send (getPort 'out) setValue! v this))))
-
-    (define (getValue)
-      v)
-
-    (define/override (resolve)
-      (let* ([p (getPort 'out)])
-        (and (not (unset? v))
-             (send p setValue! v this))))
-
-    (public
-      (set setValue!)
-      getValue)))
 
 (define LeftOf (f->c
                  '((square (ob s) (side l))

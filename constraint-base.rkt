@@ -22,7 +22,10 @@
     ; return If the constraints were satisfied, true
     ;        otherwise false
     (define (resolve)
-      (error "abstract"))
+      (define (allPortsAreConnected)
+        (andmap is-set? (dict-values _connectors)))
+      (when (allPortsAreConnected)
+        (inner (void) resolve)))
 
     (define (getName)
       name)
@@ -37,6 +40,7 @@
       (hash-update! _connectors port (const unset)))
 
     (define (attach port connector)
+      (displayln `(attaching ,connector to ,this at ,port))
       (hash-update! _connectors port (const connector)))
 
     (define (getPort port-name)
@@ -53,14 +57,16 @@
 
     (define (neighbors) (getConnectors))
 
+    (pubment resolve)
     (public getPort 
             setPortValue!
-            resolve reevaluate 
+            reevaluate 
+            attach
             connectorNames
             getConnectors
             getName
             neighbors
-            disconnect attach)
+            disconnect)
     ; for writeable<%>
     (public custom-write custom-display)))
 
@@ -112,3 +118,19 @@
         (helper newSeen newVerts newEdges))))
         
   (remove-duplicates (helper '() verts '())))
+
+; because f->c needs it...
+(define Constant
+  (class Constraint
+    (super-new [ports '(toSet)] [name 'Constant])
+    (init value connector)
+    (inherit getPort)
+    (define _v value)
+    (define (getValue) _v)
+
+    (define/augment (resolve)
+      (let ([p (getPort 'toSet)])
+        (send p setValue! _v this)))
+    (connect connector this 'toSet)
+    (send connector setValue! value this)
+    (public getValue)))

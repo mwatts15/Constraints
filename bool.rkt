@@ -8,7 +8,7 @@
   (class Constraint
     (super-new (ports '(arg out))(name 'Not))
     (inherit getPort)
-    (define/override (resolve)
+    (define/augment (resolve)
       (let ([arg (getPort 'arg)]
             [out (getPort 'out)])
         (if (or (send arg hasValue?) (send out hasValue?))
@@ -24,7 +24,7 @@
     (inherit getPort)
 
     ; resolves the value at the given port if possible
-    (define/override (resolve)
+    (define/augment (resolve)
       (let* ([a1 (getPort 'lhs)]
              [a2 (getPort 'rhs)]
              [o (getPort 'out)]
@@ -50,7 +50,7 @@
     (inherit getPort)
 
     ; resolves the value at the given port if possible
-    (define/override (resolve)
+    (define/augment (resolve)
       ;(display "calling resolve for And")(newline)
       (let* ([a1 (getPort 'lhs)]
              [a2 (getPort 'rhs)]
