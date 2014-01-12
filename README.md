@@ -13,6 +13,7 @@ Example Code (not fully implemented!!):
     (+ (rhs x^2) (lhs y^2) (res r))
     (const 2 (toSet x))
     (const 8 (toSet r))
+
 Produces:
 
     (= y^2 4)

@@ -33,16 +33,27 @@
 (define tests
   (append 
     (list (test-suite "Even"
-                      (test-case "successs"
-                                 (let ([c (new Even)]
-                                       [v (new TestConnector-1)])
-                                   (connect v c 'arg)
-                                   (check-not-exn (thunk (send v setValue! 2 'tester)))))
-                      (test-case "failure"
-                                 (let ([c (new Even)]
-                                       [v (new TestConnector-1)])
-                                   (connect v c 'arg)
-                                   (check-exn exn:contradiction? (thunk (send v setValue! 3 'tester)))))))
+            (test-case "successs"
+              (let ([c (new Even)]
+                    [v (new TestConnector-1)])
+                (connect v c 'arg)
+                (check-not-exn (thunk (send v setValue! 2 'tester)))))
+            (test-case "failure"
+              (let ([c (new Even)]
+                    [v (new TestConnector-1)])
+                (connect v c 'arg)
+                (check-exn exn:contradiction? (thunk (send v setValue! 3 'tester))))))
+          (test-suite "Product"
+            (test-case "implied zero on result"
+              (let ([c (new Product)]
+                    [v1 (new TestConnector-1)]
+                    [v2 (new TestConnector-1)]
+                    [o (new TestConnector-1)])
+                (connect o c 'res)
+                (connect v1 c 'lhs)
+                (connect v2 c 'rhs)
+                (send v1 setValue! 0 'tester)
+                (check-equal? (send o getValue) 0)))))
     (map testMathResolveSuccess
          (list Product Quotient Sum Difference)
          (list "Product" "Quotient" "Sum" "Difference")

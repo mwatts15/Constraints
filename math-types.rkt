@@ -25,7 +25,10 @@
              [lv (send l getValue)]
              [rv (send r getValue)]
              [pv (send p getValue)])
-        (cond [(and (is-set? lv)
+        (cond [(or (and (is-set? lv) (zero? lv))
+                   (and (is-set? rv) (zero? rv)))
+               (send p setValue! 0 this)]
+              [(and (is-set? lv)
                     (is-set? rv))
                (send p setValue! (* lv rv) this)]
               [(and (is-set? lv)
