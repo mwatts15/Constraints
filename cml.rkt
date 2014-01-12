@@ -2,6 +2,8 @@
 
 (require "constraint-lang.rkt"
          "math-types.rkt"
+         "console-rep.rkt"
+         "connector.rkt"
          "constraint-types.rkt")
 
 (provide evalFile)
@@ -23,7 +25,12 @@
   (loop))
 
 (define (evalFile fname)
-  (f->c (read/f->c (open-input-file fname)) types #:name 'Top))
+  (let* ([cc (f->c (read/f->c (open-input-file fname)) types #:name 'Top)]
+         [c (new cc)])
+    (for ([p (send c connectorNames)])
+      (let ([connector (new Connector [name p])])
+        (connect connector c p)
+        (new ConsoleRep [c connector])))))
 
 (define inputFile
   (command-line
