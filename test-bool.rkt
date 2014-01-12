@@ -17,14 +17,14 @@
     (define test-name (format "resolveNot (~a,~a)" argVal outVal))
     (test-case test-name
                (let ([myNot (new Not)]
-                     [arg (new Constant)]
-                     [out (new Constant)])
-                 (connectConstraints myNot 'out out 'out)
-                 (connectConstraints myNot 'arg arg 'out)
-                 (send arg setValue! argVal)
+                     [arg (new TestConnector-1)]
+                     [out (new TestConnector-1)])
+                 (connect arg myNot 'out)
+                 (connect out myNot 'arg)
+                 (send arg setValue! argVal 'tester)
                  ((if (and (eq? outVal argVal) (not (unset? outVal)))
                     (curry check-exn exn:contradiction?)
-                    identity) (thunk (send out setValue! outVal))))))
+                    identity) (thunk (send out setValue! outVal 'tester))))))
   (for ([a argument-options])
     (for ([o argument-options])
       (inner a o))))

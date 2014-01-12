@@ -1,8 +1,4 @@
-(= formula
-   (+ (lhs a) (rhs b) (res s1)) 
-   (+ (lhs s1) (rhs c) (res s2)) 
-   (+ (lhs s2) (rhs d) (res s3))
-   (+ (lhs k) (rhs q) (res z))
-   (/ (lhs p) (rhs q) (res quot)))
-
-(formula (p 2) (q 5))
+(* (rhs 2) (lhs 2) (res x^2))
+(* (rhs y) (lhs y) (res y^2))
+(* (rhs 2) (lhs y) (res y^2))
+(+ (rhs x^2) (lhs y^2) (res 8))

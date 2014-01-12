@@ -28,7 +28,7 @@
       (send this custom-write out))
 
     (define (_set newval setter)
-      ;(display `(,setter settting ,this to ,newval from ,v))(newline)
+      (display `(,setter settting ,this to ,newval from ,v))(newline)
       (cond [(not (send this hasValue?))
              (set! v newval)
              (set! informant setter)
@@ -47,7 +47,7 @@
     (define (requestSetValue! newval setter)
       ;(display `(attempting to switch ,v to ,newval))(newline)
       (when (send this hasValue?)
-             (forget informant))
+        (forget informant))
       (_set newval setter))
 
     (define (forget retractor)
@@ -63,7 +63,6 @@
       v)
 
     (define (connect new-observer)
-      ;(display `(connecting ,new-observer to ,this)) (newline)
       (set! _observers (set-add _observers new-observer)))
 
     (define (disconnect c)
@@ -90,10 +89,11 @@
       getValue)))
 
 (define (connect connector observer [p null])
-    (send connector
-          connect observer)
-    (send observer
-          attach p connector))
+  (send connector
+        connect observer)
+  (send observer
+        attach p connector)
+  (send observer resolve))
 
 ; returns true if a is consistent with b
 (define (consistent? a b) 

@@ -66,8 +66,6 @@
       [l (new Variable [name 'list])]
       [th (new Variable [name 'tail-head])]
       [tt (new Variable [name 'tail-tail])]
-      [theList (new Constant)]
-      [firstValue (new Constant)]
       [isf (new List)]
       [istf (new List)]) 
   (connect l isf 'list)

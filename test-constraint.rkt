@@ -12,7 +12,7 @@
 (define TestConstraint
   (class Constraint
     (super-new)
-    (define/override (resolve)
+    (define/augment (resolve)
       #t)))
 
 (define TestConnector-2
@@ -33,6 +33,12 @@
 
 (define tests
   (list
+    (test-suite "Constant"
+      (test-case "set on connect"
+        (let ([constant (new Constant [value 'value])]
+              [c (new TestConnector-2)])
+          (connect c constant 'toSet)
+          (check-true (send c hasValue?)))))
     (test-suite "Constraint"
       (test-case "forgets propagates"
         (let ([c1 (new TestConnector-2)]
