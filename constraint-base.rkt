@@ -4,7 +4,8 @@
          "traversable.rkt"
          "unset.rkt")
 
-(provide (all-defined-out))
+(provide (all-defined-out)
+         (all-from-out "unset.rkt"))
 
 (define Constraint
   (class* object% (writable<%> ConnectorObserver Traverseable)
@@ -40,7 +41,7 @@
       (hash-update! _connectors port (const unset)))
 
     (define (attach port connector)
-      (displayln `(attaching ,connector to ,this at ,port))
+      ;(displayln `(attaching ,connector to ,this at ,port))
       (hash-update! _connectors port (const connector)))
 
     (define (getPort port-name)
@@ -132,5 +133,4 @@
       (let ([p (getPort 'toSet)])
         (send p setValue! _v this)))
     (connect connector this 'toSet)
-    (send connector setValue! value this)
     (public getValue)))

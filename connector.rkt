@@ -22,20 +22,22 @@
       (if informant true false))
 
     (define (custom-write out)
-      (display _name out)(display _observers out))
+      (display _name out))
 
     (define (custom-display out)
       (send this custom-write out))
 
     (define (_set newval setter)
-      (display `(,setter settting ,this to ,newval from ,v))(newline)
-      (cond [(not (send this hasValue?))
+      (display `(,setter setting ,this to ,newval from ,v))(newline)
+      (cond [(equal? v newval) #t]
+            [(or (not (send this hasValue?))
+                 (consistent? v newval))
              (set! v newval)
              (set! informant setter)
              (for ([x _observers]
                    #:unless (eq? x setter))
                (send x resolve))]
-            [((compose not consistent?) v newval)
+            [(not (or (equal? newval v) (consistent? newval v)))
              (raise (exn:contradiction v newval this))]))
 
     (define (informant? c)
@@ -96,10 +98,8 @@
   (send observer resolve))
 
 ; returns true if a is consistent with b
-(define (consistent? a b) 
-  (or (equal? a b)
-      (and (is-a? a Value) (send a isConsistentWith? b))
-      (and (is-a? b Value) (send b isConsistentWith? a))))
+(define (consistent? original new) 
+  (and (is-a? original Value) (send original isConsistentWith? new)))
 
 (define (exn:contradiction oldval newval connector)
   (list 'contradiction ': 'setting newval 'from oldval 'on connector))

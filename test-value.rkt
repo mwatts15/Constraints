@@ -92,8 +92,23 @@
       (test-case "addition"
         (let ([r1 (new Range (start 2) (end 3))]
               [r2 (new Range (start 5) (end 7))])
-          (let ([r3 (send r1 add r2)])
-            (check-eq? 7 (get-field start r3))
-            (check-eq? 10 (get-field end r3))))))))
+          (let*-values ([(r3) (send r1 add r2)]
+                       [(s e) (send r3 bounds)])
+            (check-eq? 7 s)
+            (check-eq? 10 e))))
+      (test-case "subset"
+        (let ([r1 (new Range [start 8.0] [end 10.0])]
+              [r2 (new Range [start 8.0] [end +inf.0])]) 
+          (check-true (send r2 is-subset? r1))))
+      (test-case "start <= end"
+        (let ([r (new Range [start 20] [end 2])]) 
+          (let*-values ([(s e) (send r bounds)])
+            (check <= s e))))
+      (test-case "right infinity"
+        (let* ([r (new Range [start 0] [end +inf.0])]
+               [rp (send r add 9)])
+          (let-values ([(s e) (send rp bounds)])
+          (check-equal? s 9.0)
+          (check-equal? e +inf.0)))))))
 (for ([t tests])
   (run-tests t 'verbose))

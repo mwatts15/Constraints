@@ -31,48 +31,87 @@
   (make-object Point x y))
 
 (define Set
-  (interface () is-subset? is-member?))
+  (class* object% (Value)
+    (super-new)
+    (abstract is-subset?
+              is-member?)
+    (define (isConsistentWith? other) (is-subset? other))
+    (public isConsistentWith?)))
     
   ; define a set interface
   ; define functions on sets
   ;   union, intersection, etc.
 ; A union of Sets
 (define Union
-  (class* object% (Set)
+  (class Set
     [init sets]
+    (super-new)
     (define my-sets '())
     (define (is-member? x)
       (ormap (lambda (y) (send y is-member? x)) my-sets))
     (define (is-subset? a-set)
       (sequence-andmap (lambda (x) (is-member? x)) (send a-set values)))
-    (public is-member? is-subset?)))
+    (override is-member? is-subset?)))
 
 (define Range
-  (class* object% (Set) 
+  ; defines a closed interval between _start and _end
+  (class* Set (writable<%> equal<%>)
     (super-new)
-    (init-field start end)
-    (define/public (add other)
+    (init start end)
+    (define _start (min start end))
+    (define _end (max start end))
+
+    (define (equal-to? other arg)
+      (or (eq? other this)
+          (and (is-subset? other)
+               (send other is-subset? this))))
+    (define (equal-hash-code-of arg)
+      (* (expt 2 _start)
+         (expt 3 _end)))
+    (define (equal-secondary-hash-code-of arg)
+      (* (bitwise-xor _start 123)
+         (bitwise-xor _end 2363)))
+
+    (define (add other)
       (cond [(number? other)
              (add-number other)]
             [(is-a? other Range)
              (add-range other)]))
 
+    (define (custom-write out)
+      (fprintf out "[~a, ~a]" _start _end))
+
+    (define (custom-display out)
+      (custom-write out))
+    
+    (define (bounds)
+      (values _start _end))
+
     (define (add-number number)
-      (new Range [start (+ start number)] [end (+ end number)]))
+      (new Range [start (+ _start number)] [end (+ _end number)]))
 
     (define (add-range range)
-      (new Range 
-           [start (+ (get-field start range) start)]
-           [end (+ (get-field end range) end)]))
+      (let-values ([(s e) (send range bounds)])
+        (new Range [start (+ s _start)] [end (+ e _end)])))
+
+    (define (intersect range)
+      (let-values ([(s e) (send range bounds)])
+        (new Range [start (max s _start)] [end (min e _end)])))
+
     (define (is-member? x)
-      (and (< x end) (> x start)))
+      (and (< x _end) (> x _start)))
+
     (define (is-subset? s)
       (if (is-a? s Range)
-        (and (< start (get-field start s))
-             (> end (get-field end s)))
+        (let-values ([(s e) (send s bounds)])
+          (and (<= _start s)
+               (>= _end e)))
         false))
 
-    (public add-number add-range is-subset? is-member?)))
+    (override is-subset? is-member?)
+    (public custom-write custom-display)
+    (public equal-to? equal-hash-code-of equal-secondary-hash-code-of)
+    (public intersect bounds add-number add-range add)))
 
 (define World 
   (let ()

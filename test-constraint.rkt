@@ -35,9 +35,8 @@
   (list
     (test-suite "Constant"
       (test-case "set on connect"
-        (let ([constant (new Constant [value 'value])]
-              [c (new TestConnector-2)])
-          (connect c constant 'toSet)
+        (let* ([c (new TestConnector-2)]
+               [constant (new Constant [value 'value] [connector c])])
           (check-true (send c hasValue?)))))
     (test-suite "Constraint"
       (test-case "forgets propagates"

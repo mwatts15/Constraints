@@ -2,6 +2,7 @@
 
 (require "constraint-lang.rkt"
          "math-types.rkt"
+         "inequality.rkt"
          "console-rep.rkt"
          "connector.rkt"
          "constraint-types.rkt")
@@ -15,7 +16,8 @@
         '- Difference
         'even Even
         'array Array
-        '= Equal))
+        '< LessThan
+        'is Equal))
 
 (define (read/f->c in)
   (define (loop)

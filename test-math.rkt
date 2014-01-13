@@ -25,10 +25,12 @@
           (let ([res (if (and (eq? op /) (zero? b))
                        unset 
                        (op a b))])
-            (test-not-exn (format "~a ~a" a b)
+            ((if (and (unset? res) (not (zero? a)))
+               (curry check-exn exn:contradiction?)
+               check-not-exn)
               (thunk (setAllOrders `((,v1 . ,a)
                                      (,v2 . ,b)
-                                     (,o . ,res)))))))))))
+                                     (,o . ,res))))(format "~a ~a" a b))))))))
 
 (define tests
   (append 

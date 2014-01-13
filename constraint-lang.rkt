@@ -32,15 +32,11 @@
       (for ([binding (dict-ref vstore p)])
         (match-let ([`(,constraint . ,portName) binding])
           (connect c constraint portName))))
-    (if (eq? (caar formulas) '=)
-      (let* ([f (first formulas)]
-             [r (rest formulas)]
-             [name (cadr f)]
-             [form (cddr f)])
-        (f->c r (hash-set userOps 
-                          name (f->c form userOps #:name name))
-              #:name constraintName))
-      (for ([f formulas])
+    (for ([f formulas])
+      (if (eq? (first f) '=)
+        (let* ([name (second f)]
+               [form (rest (rest f))])
+          (set! userOps (hash-set userOps name (f->c form userOps #:name name))))
         (match-let* ([(cons cName bindings) f] 
                      [c (new (dict-ref userOps cName))])
           (checkBindings c bindings)
