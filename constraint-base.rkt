@@ -10,7 +10,7 @@
 (define Constraint
   (class* object% (writable<%> ConnectorObserver Traverseable)
     (super-new)
-    (init (ports '()))
+    (init [ports '()])
     (init-field [name 'GenericConstraint])
     (define _connectors (make-hash (map (lambda (l) (cons l unset))
                                        ports)))
@@ -46,9 +46,14 @@
 
     (define (getPort port-name)
       (hash-ref _connectors port-name))
+    (define (getConnector port)
+      (getPort port))
 
     (define (setPortValue! p v s)
       (send (hash-ref _connectors p) setValue! v s))
+
+    (define (portNames)
+      (connectorNames))
 
     (define (connectorNames)
       (dict-keys _connectors))
@@ -60,10 +65,12 @@
 
     (pubment resolve)
     (public getPort 
+            getConnector
             setPortValue!
             reevaluate 
             attach
             connectorNames
+            portNames
             getConnectors
             getName
             neighbors

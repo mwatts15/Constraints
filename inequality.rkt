@@ -1,8 +1,9 @@
 #lang racket
 
 (require "constraint-base.rkt"
+         "constraint-lang.rkt"
          "value.rkt")
-(provide LessThan)
+(provide LessThan GreaterThan)
 (define LessThan
   (class Constraint
     (super-new [ports '(lesser greater)] [name 'LessThan])
@@ -20,3 +21,7 @@
                (let* ([s (new Range [start -inf.0] [end gv])]
                       [sp (if (is-set? lv) (send lv intersect s) s)])
                  (send l setValue! sp this))])))))
+(define GreaterThan
+  (f->c '((< (lesser greater) (greater lesser)))
+        `((< . ,LessThan))
+        #:name 'GreaterThan))

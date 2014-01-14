@@ -7,11 +7,7 @@
          (prefix-in V: "value.rkt"))
 
 (provide List
-         Array
-         At
-         Point
-         LeftOf
-         Square)
+         Array)
 
 (define-syntax-rule (PredicateConstraint name pred? satisfier)
   (define name
@@ -75,83 +71,3 @@
                       (is-set? vv))
                  (let ([vec (send a getValue)])
                    (send i setValue! (vector-member vv vec) this))]))))))
-(define Square
-  (class Constraint
-    (super-new [ports '(ob side)] [name 'Square])
-    (inherit getPort)
-    (define/augment (resolve)
-      (let* ([s (getPort 'side)]
-             [r (getPort 'ob)]
-             [sv (send s getValue)]
-             [rv (send r getValue)])
-        (cond [(is-set? sv)
-               (let ([rect (new V:Rectangle)])
-                 (set-field! w rect sv)
-                 (set-field! h rect sv)
-                 (send r setValue! rect this))]
-              [(is-set? rv)
-               (let* ([rvWidth (get-field w rv)]
-                      [rect (new V:Rectangle)])
-                 (set-field! h rect rvWidth)
-                 (set-field! w rect rvWidth)
-                 (send s setValue! rvWidth this)
-                 (send r setValue! rect this))])))))
-(define At
-  (class Constraint
-    (super-new [ports '(loc ob world)] [name 'At])
-    (inherit getPort)
-    (define/augment (resolve)
-      (let* ([l (getPort 'loc)]
-             [o (getPort 'ob)]
-             [w (getPort 'world)]
-             [lv (send l getValue)]
-             [ov (send o getValue)]
-             [wv (send w getValue)])
-        (cond [(and (is-set? lv)
-                    (is-set? wv)
-                    (equal? 1 (length (send wv getObjectsAt lv))))
-               (send o setValue! (first (send wv getObjectsAt lv)) this)]
-              [(and (is-set? lv)
-                    (is-set? ov))
-               (let ([newWorld (if (unset? wv)
-                                 (new V:World)
-                                 (new V:World [oldWorld wv]))])
-                 (send newWorld placeObject ov lv)
-                 (send w setValue! newWorld this))]
-              [(and (is-set? wv)
-                    (is-set? ov)
-                    (is-set? (send wv getLocationOf ov)))
-               (send l setValue! (send wv getLocationOf ov) this)])))))
-(define Point
-  (class Constraint
-    (super-new [ports '(pt x y)] [name 'Point])
-    (inherit getPort)
-    (define/augment (resolve)
-      (let* ([p (getPort 'pt)]
-             [y (getPort 'y)]
-             [x (getPort 'x)]
-             [pv (send p getValue)]
-             [yv (send y getValue)]
-             [xv (send x getValue)])
-        (cond [(is-set? pv)
-               (send x setValue! (get-field x pv) this)
-               (send y setValue! (get-field y pv) this)]
-              [(and (is-set? xv)
-                    (is-set? yv))
-               (let ([newPoint (V:make-point xv yv)])
-                 (send p setValue! newPoint this))])))))
-
-(define LeftOf (f->c
-                 '((square (ob s) (side l))
-                   (square (ob r) (side k))
-                   (at (loc p) (ob s) (world w))
-                   (point (pt p) (x x) (y y))
-                   (+ (lhs l) (rhs x) (res qx))
-                   (point (pt q) (x qx) (y y))
-                   (at (loc q) (ob r) (world w)))
-                 `((square . ,Square)
-                   (at . ,At)
-                   (+ . ,Sum)
-                   (point . ,Point))
-                 #:name 'LeftOf))
-

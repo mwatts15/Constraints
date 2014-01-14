@@ -100,10 +100,26 @@
         (let ([r1 (new Range [start 8.0] [end 10.0])]
               [r2 (new Range [start 8.0] [end +inf.0])]) 
           (check-true (send r2 is-subset? r1))))
+      (test-case "intersect overlapping"
+        (let ([r1 (new Range [start -2.0] [end 10.0])]
+              [r2 (new Range [start 8.0] [end +inf.0])]) 
+          (let*-values ([(s e) (send (send r1 intersect r2) bounds)])
+            (check-equal? s 8.0)
+            (check-equal? e 10.0))))
+      (test-case "intersect kissing"
+        (let ([r1 (new Range [start -2.0] [end 8.0])]
+              [r2 (new Range [start 8.0] [end +inf.0])]) 
+          (let*-values ([(s e) (send (send r1 intersect r2) bounds)])
+            (check-equal? s 8.0)
+            (check-equal? e 8.0))))
+      (test-case "intersect disjoint"
+        (let ([r1 (new Range [start -2.0] [end 6.0])]
+              [r2 (new Range [start 8.0] [end +inf.0])]) 
+          (let ([s (send r1 intersect r2)])
+            (check-equal? s 8.0)
+            (check-equal? e 8.0))))
       (test-case "start <= end"
-        (let ([r (new Range [start 20] [end 2])]) 
-          (let*-values ([(s e) (send r bounds)])
-            (check <= s e))))
+        (check-exn (const #t) (new Range [start 20] [end 2])))
       (test-case "right infinity"
         (let* ([r (new Range [start 0] [end +inf.0])]
                [rp (send r add 9)])

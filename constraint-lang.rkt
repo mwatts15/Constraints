@@ -1,6 +1,7 @@
 #lang racket
 
 (require "constraint-base.rkt"
+         "console-rep.rkt"
          racket/trace
          "connector.rkt")
 (provide f->c)
@@ -32,6 +33,7 @@
       (for ([binding (dict-ref vstore p)])
         (match-let ([`(,constraint . ,portName) binding])
           (connect c constraint portName))))
+
     (for ([f formulas])
       (if (eq? (first f) '=)
         (let* ([name (second f)]
@@ -49,5 +51,8 @@
                   (connect connector c portName)
                   (new Constant [connector connector][value varName]))))))))
     (super-new [ports (dict-keys vstore)] [name constraintName])
-
+    (for ([p (send this portNames)])
+      (let ([c (new Connector [name p])])
+        (new ConsoleRep [c c])
+        (attach p c)))
     (override attach)))

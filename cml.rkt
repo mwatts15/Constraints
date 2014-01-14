@@ -3,6 +3,7 @@
 (require "constraint-lang.rkt"
          "math-types.rkt"
          "inequality.rkt"
+         "geometry.rkt"
          "console-rep.rkt"
          "connector.rkt"
          "constraint-types.rkt")
@@ -17,6 +18,9 @@
         'even Even
         'array Array
         '< LessThan
+        '> GreaterThan
+        'dist Distance
+        'point Point
         'is Equal))
 
 (define (read/f->c in)
@@ -28,12 +32,8 @@
   (loop))
 
 (define (evalFile fname)
-  (let* ([cc (f->c (read/f->c (open-input-file fname)) types #:name 'Top)]
-         [c (new cc)])
-    (for ([p (send c connectorNames)])
-      (let ([connector (new Connector [name p])])
-        (connect connector c p)
-        (new ConsoleRep [c connector])))))
+  (let* ([cc (f->c (read/f->c (open-input-file fname)) types #:name 'Top)])
+         (new cc)))
 
 (define inputFile
   (command-line
