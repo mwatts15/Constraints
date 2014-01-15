@@ -2,63 +2,50 @@
 (provide (all-defined-out))
 
 (define (intersect s1 s2)
-  (if (or (eq? s1 EmptySet)
-          (eq? s2 EmptySet))
-    EmptySet
-    (match (list s1 s2)
-       [(list (Range st1 en1) (Range st2 en2))
-        (new Range (max st1 st2) (min en1 en2))])))
+  (match (list s1 s2)
+         [`(,x ,x) x]
+         [(or `(EmptySet ,x)
+              `(,x EmptySet))
+          EmptySet]
+         [(or `(,(Range st en) ,(Singleton x))
+              `(,(Singleton x) ,(Range st en)))
+          (if (<= st x en)
+            (Singleton x)
+            EmptySet)]
+         [(or `(,(Range st1 x) ,(Range x en2))
+              `(,(Range x en2) ,(Range st1 x)))
+           (Singleton x)]
+         [`(,(Range st1 en1) ,(Range st2 en2))
+           (if (or (<= st1 st2 en1)
+                   (<= st2 en1 en2)
+                   (<= st1 en2 en1)
+                   (<= st2 st1 en2))
+             (Range (max st1 st2) (min en1 en2))
+             EmptySet)]))
 
-(define Set
-  (class* object% (Value)
-    (super-new)
-    (abstract is-subset?
-              intersect
-              is-member?)
-    (define (isConsistentWith? other) (is-subset? other))
-    (public isConsistentWith?)))
-    
-(define Singleton
-  (class Set
-    (super-new)
-    (init value)
-    (define (is-subset? s)
-      (or (equal? this s))
-    (define (is-member? e)
-      #f)
-    (define (intersect other)
-      this)
-    (override is-subset?
-              is-member?
-              intersect)))
-(define EmptySet
-  (new (class Set
-         (super-new)
-         (define (is-subset? s)
-           #f)
-         (define (is-member? e)
-           #f)
-         (define (intersect other)
-           this)
-         (override is-subset?
-                   is-member?
-                   intersect))))
+(struct Singleton (value) #:transparent)
+
+(define EmptySet (gensym 'EmptySet))
 ; define a set interface
 ; define functions on sets
 ;   union, intersection, etc.
 ; A union of Sets
-(define Union
-  (class Set
-    [init sets]
-    (super-new)
-    (define my-sets '())
-    (define (is-member? x)
-      (ormap (lambda (y) (send y is-member? x)) my-sets))
-    (define (is-subset? a-set)
-      (sequence-andmap (lambda (x) (is-member? x)) (send a-set values)))
-    (override is-member? is-subset?)))
+;(define Union
+  ;(class Set
+    ;[init sets]
+    ;(super-new)
+    ;(define my-sets '())
+    ;(define (is-member? x)
+      ;(ormap (lambda (y) (send y is-member? x)) my-sets))
+    ;(define (is-subset? a-set)
+      ;(sequence-andmap (lambda (x) (is-member? x)) (send a-set values)))
+    ;(override is-member? is-subset?)))
 
-(struct Range (start end))
+(struct Range (start end) #:transparent 
+        #:guard (lambda (start end name)
+                  (if (end . < . start)
+                    (error (format "start ~a must precede end ~a in Range" start end))
+                    (values start end))))
 ; a closed interval
 #|(define Range|#
   ;; defines a closed interval between _start and _end

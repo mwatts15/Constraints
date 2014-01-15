@@ -89,42 +89,34 @@
           (send w moveObject 'anObject 'aLocation)
           (check-equal? (send w getObjectsAt 'aLocation) '(anObject)))))
     (test-suite "Range"
-      (test-case "addition"
-        (let ([r1 (new Range (start 2) (end 3))]
-              [r2 (new Range (start 5) (end 7))])
-          (let*-values ([(r3) (send r1 add r2)]
-                       [(s e) (send r3 bounds)])
-            (check-eq? 7 s)
-            (check-eq? 10 e))))
-      (test-case "subset"
-        (let ([r1 (new Range [start 8.0] [end 10.0])]
-              [r2 (new Range [start 8.0] [end +inf.0])]) 
-          (check-true (send r2 is-subset? r1))))
+      ; have to define on struct Ranges
+      ;(test-case "addition"
+        ;(let ([r1 (Range 2 3)]
+              ;[r2 (Range 5 7)])
+          ;(check-equal? (Range 7 10) (Range+Range r1 r2))))
+      ;(test-case "subset"
+        ;(let ([r1 (Range 8.0 10.0)]
+              ;[r2 (Range 8.0 +inf.0)]) 
+          ;(check-true (send r2 is-subset? r1))))
+      ;(test-case "add to infinity"
+        ;(let* ([r (Range 0 +inf.0)]
+               ;[rp (Range+number r 9)])
+          ;(check-equal? rp (Range 9.0 +inf.0))))
       (test-case "intersect overlapping"
-        (let ([r1 (new Range [start -2.0] [end 10.0])]
-              [r2 (new Range [start 8.0] [end +inf.0])]) 
-          (let*-values ([(s e) (send (send r1 intersect r2) bounds)])
-            (check-equal? s 8.0)
-            (check-equal? e 10.0))))
+        (let ([r1 (Range -2.0 10.0)]
+              [r2 (Range 8.0 +inf.0)]) 
+          (check-equal? (intersect r1 r2) (Range 8.0 10.0))))
       (test-case "intersect kissing"
-        (let ([r1 (new Range [start -2.0] [end 8.0])]
-              [r2 (new Range [start 8.0] [end +inf.0])]) 
-          (let*-values ([(s e) (send (send r1 intersect r2) bounds)])
-            (check-equal? s 8.0)
-            (check-equal? e 8.0))))
+        (let ([r1 (Range -2.0 8.0)]
+              [r2 (Range 8.0 +inf.0)]) 
+          (check-equal? (intersect r2 r1) (Singleton 8.0))
+          (check-equal? (intersect r1 r2) (Singleton 8.0))))
       (test-case "intersect disjoint"
-        (let ([r1 (new Range [start -2.0] [end 6.0])]
-              [r2 (new Range [start 8.0] [end +inf.0])]) 
-          (let ([s (send r1 intersect r2)])
-            (check-equal? s 8.0)
-            (check-equal? e 8.0))))
+        (let ([r1 (Range -2.0 6.0)]
+              [r2 (Range 8.0 +inf.0)]) 
+            (check-equal? (intersect r2 r1) EmptySet)
+            (check-equal? (intersect r1 r2) EmptySet)))
       (test-case "start <= end"
-        (check-exn (const #t) (new Range [start 20] [end 2])))
-      (test-case "right infinity"
-        (let* ([r (new Range [start 0] [end +inf.0])]
-               [rp (send r add 9)])
-          (let-values ([(s e) (send rp bounds)])
-          (check-equal? s 9.0)
-          (check-equal? e +inf.0)))))))
+        (check-exn (const #t) (thunk (Range 20 2)))))))
 (for ([t tests])
   (run-tests t 'verbose))
