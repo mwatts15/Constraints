@@ -14,11 +14,13 @@
              [lv (send l getValue)]
              [gv (send g getValue)])
         (cond [(and (is-set? lv) (number? lv))
-               (let* ([s (new Range [start lv] [end +inf.0])]
-                      [sp (if (is-set? gv) (send gv intersect s) s)])
+               (let* ([s (Range lv +inf.0)]
+                      [sp (if (is-set? gv)
+                            (intersect (Singleton gv) s)
+                            s)])
                  (send g setValue! sp this))]
               [(and (is-set? gv) (number? gv))
-               (let* ([s (new Range [start -inf.0] [end gv])]
+               (let* ([s (Range -inf.0 gv)]
                       [sp (if (is-set? lv) (send lv intersect s) s)])
                  (send l setValue! sp this))])))))
 (define GreaterThan

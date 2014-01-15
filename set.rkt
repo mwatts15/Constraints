@@ -41,6 +41,18 @@
       ;(sequence-andmap (lambda (x) (is-member? x)) (send a-set values)))
     ;(override is-member? is-subset?)))
 
+(define/match (Range+Range r1 r2)
+  [((Range s1 e1) (Range s2 e2))
+   (Range (+ s1 s2) (+ e1 e2))])
+
+(define/match (Range+number r n)
+  [((Range s e) (? number? n))
+   (Range (+ s n) (+ e n))])
+
+(define/match (isSubsetOf? s1 s2)
+  [((Range s1 e1) (Range s2 e2))
+   (<= s2 s1 e1 e2)])
+
 (struct Range (start end) #:transparent 
         #:guard (lambda (start end name)
                   (if (end . < . start)

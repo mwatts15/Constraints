@@ -89,19 +89,36 @@
           (send w moveObject 'anObject 'aLocation)
           (check-equal? (send w getObjectsAt 'aLocation) '(anObject)))))
     (test-suite "Range"
-      ; have to define on struct Ranges
-      ;(test-case "addition"
-        ;(let ([r1 (Range 2 3)]
-              ;[r2 (Range 5 7)])
-          ;(check-equal? (Range 7 10) (Range+Range r1 r2))))
-      ;(test-case "subset"
-        ;(let ([r1 (Range 8.0 10.0)]
-              ;[r2 (Range 8.0 +inf.0)]) 
-          ;(check-true (send r2 is-subset? r1))))
-      ;(test-case "add to infinity"
-        ;(let* ([r (Range 0 +inf.0)]
-               ;[rp (Range+number r 9)])
-          ;(check-equal? rp (Range 9.0 +inf.0))))
+      (test-suite "addition"
+        (test-case "range+range"
+          (let ([r1 (Range 2 3)]
+                [r2 (Range 5 7)])
+            (check-equal? (Range 7 10) (Range+Range r1 r2))))
+        (test-case "range+number"
+          (let* ([r (Range 0 +inf.0)]
+                 [rp (Range+number r 9.0)])
+            (check-equal? rp (Range 9.0 +inf.0))))
+        (test-case "Range+number bad argument"
+          (check-exn (const #t) (thunk (Range+number (Range 1 2) 'horse))))
+        (test-case "Range+Range bad argument"
+          (check-exn (const #t) (thunk (Range+Range (Range 1 2) 'horse)))))
+      (test-suite "subset"
+        (test-case "smaller in larger"
+          (let ([r1 (Range 8.0 10.0)]
+                [r2 (Range 8.0 +inf.0)]) 
+            (check-true (r1 . isSubsetOf? . r2))))
+        (test-case "overlapping"
+          (let ([r1 (Range 7.0 10.0)]
+                [r2 (Range 8.0 20)]) 
+            (check-false (r1 . isSubsetOf? . r2))))
+        (test-case "same"
+          (let ([r1 (Range 8.0 20.0)]
+                [r2 (Range 8.0 20.0)]) 
+            (check-true (r1 . isSubsetOf? . r2))))
+        (test-case "larger in smaller"
+          (let ([r1 (Range 7.0 10.0)]
+                [r2 (Range 8.0 20)]) 
+            (check-false (r2 . isSubsetOf? . r1)))))
       (test-case "intersect overlapping"
         (let ([r1 (Range -2.0 10.0)]
               [r2 (Range 8.0 +inf.0)]) 
